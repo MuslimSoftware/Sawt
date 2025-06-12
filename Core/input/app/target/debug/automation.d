@@ -1,0 +1,1 @@
+/Users/younesbenketira/Code/personal/Sawt/Core/input/app/target/debug/automation: /Users/younesbenketira/Code/personal/Sawt/Core/input/app/build.rs /Users/younesbenketira/Code/personal/Sawt/Core/input/app/src/main.rs
