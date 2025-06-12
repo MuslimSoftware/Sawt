@@ -1,0 +1,13 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/younesbenketira/Code/personal/Sawt/Core/input/library/build/cmake_install.cmake",
+		"/Users/younesbenketira/Code/personal/Sawt/Core/input/library/build/ggml/cmake_install.cmake",
+		"/Users/younesbenketira/Code/personal/Sawt/Core/input/library/build/ggml/src/cmake_install.cmake",
+		"/Users/younesbenketira/Code/personal/Sawt/Core/input/library/build/ggml/src/ggml-cpu/cmake_install.cmake",
+		"/Users/younesbenketira/Code/personal/Sawt/Core/input/library/build/ggml/src/ggml-blas/cmake_install.cmake",
+		"/Users/younesbenketira/Code/personal/Sawt/Core/input/library/build/ggml/src/ggml-metal/cmake_install.cmake",
+		"/Users/younesbenketira/Code/personal/Sawt/Core/input/library/build/src/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
