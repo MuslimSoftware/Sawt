@@ -51,25 +51,12 @@ impl VoiceActivityDetector {
     fn process_frame(&mut self, samples: &[f32]) -> VadResult {
         let energy = self.calculate_energy(samples);
         
-        // Log energy levels periodically (every 100 frames to avoid spam)
-        static mut FRAME_COUNT: usize = 0;
-        unsafe {
-            FRAME_COUNT += 1;
-            if FRAME_COUNT % 100 == 0 {
-                eprintln!("🔊 Audio energy: {:.6} (threshold: {:.6}) - {}", 
-                        energy, 
-                        self.energy_threshold,
-                        if energy > self.energy_threshold { "SPEECH" } else { "SILENCE" });
-            }
-        }
-        
         if energy > self.energy_threshold {
             self.speech_frames += 1;
             self.silence_frames = 0;
             
             if !self.is_speech_active && self.speech_frames >= self.min_speech_frames {
                 self.is_speech_active = true;
-                eprintln!("🎤 Speech detected! (energy: {:.6})", energy);
                 return VadResult::SpeechStart;
             }
         } else {
@@ -81,7 +68,6 @@ impl VoiceActivityDetector {
             
             if self.is_speech_active && self.silence_frames >= self.min_silence_frames {
                 self.is_speech_active = false;
-                eprintln!("🔇 Speech ended after {} silence frames", self.silence_frames);
                 return VadResult::SpeechEnd;
             }
         }
@@ -143,7 +129,6 @@ impl ContinuousRecorder {
         
         match vad_result {
             VadResult::SpeechStart => {
-                eprintln!("🎤 Speech detected, recording...");
                 self.recording_speech = true;
                 self.speech_start_time = Some(Instant::now());
                 self.speech_buffer.clear();
@@ -169,7 +154,6 @@ impl ContinuousRecorder {
                     // Check for maximum speech duration
                     if let Some(start_time) = self.speech_start_time {
                         if start_time.elapsed() > self.max_speech_duration {
-                            eprintln!("⏰ Maximum speech duration reached, processing...");
                             self.recording_speech = false;
                             self.speech_start_time = None;
                             
@@ -184,11 +168,6 @@ impl ContinuousRecorder {
             }
             VadResult::SpeechEnd => {
                 if self.recording_speech {
-                    let duration = self.speech_start_time
-                        .map(|start| start.elapsed())
-                        .unwrap_or(Duration::from_secs(0));
-                    
-                    eprintln!("🔇 Speech ended after {:.1}s, processing...", duration.as_secs_f32());
                     self.recording_speech = false;
                     self.speech_start_time = None;
                     
@@ -249,19 +228,9 @@ fn start_continuous_recording() -> Result<()> {
     let device = host.default_input_device()
         .ok_or_else(|| anyhow::anyhow!("No input device available"))?;
     
-    eprintln!("🎯 Sawt Continuous Voice Recognition Engine");
-    eprintln!("🎙️  Input device: {}", device.name()?);
-    
     let config = device.default_input_config()?;
     let sample_rate = config.sample_rate().0;
     let channels = config.channels();
-    
-    eprintln!("🔧 Audio config: {}Hz, {} channel(s)", sample_rate, channels);
-    eprintln!("🧠 Whisper model: Core/input/library/models/ggml-base.en.bin");
-    eprintln!("🎚️  VAD threshold: 0.0005 (energy-based detection)");
-    eprintln!("⏱️  Min speech: 5 frames (~100ms)");
-    eprintln!("⏱️  Min silence: 50 frames (~1000ms)");
-    eprintln!("{}", "=".repeat(60));
     
     let stream_config = cpal::StreamConfig {
         channels,
@@ -294,36 +263,23 @@ fn start_continuous_recording() -> Result<()> {
                 let resampled = resample_to_16khz(&speech_audio, sample_rate);
                 
                 if resampled.len() > 8000 { // At least 0.5 seconds of audio
-                    eprintln!("🎵 Processing audio: {} samples ({:.1}s)", 
-                             resampled.len(), 
-                             resampled.len() as f32 / 16000.0);
-                    
                     match transcribe_audio(&resampled) {
                         Ok(transcription) => {
                             let text = transcription.trim();
                             if !text.is_empty() && text.len() > 2 {
-                                eprintln!("🗣️  Transcribed: '{}' ({}ms audio)", 
-                                        text, 
-                                        speech_audio.len() * 1000 / sample_rate as usize);
-                                eprintln!("📤 Sending to automation: '{}'", text);
-                                println!("{}", text); // This goes to stdout for the automation runner
-                            } else {
-                                eprintln!("🔇 Transcription too short or empty: '{}'", text);
+                                println!("{}", text); // Send transcription to stdout
                             }
                         }
-                        Err(e) => eprintln!("❌ Transcription error: {}", e),
+                        Err(_) => {
+                            // Silently ignore transcription errors
+                        }
                     }
                 }
             }
         },
-        |err| eprintln!("Audio stream error: {}", err),
+        |_err| {}, // Silently ignore audio stream errors
         None,
     )?;
-    
-    eprintln!("🎤 LISTENING CONTINUOUSLY... Speak naturally!");
-    eprintln!("📢 Voice commands will be sent to automation runner");
-    eprintln!("🛑 Press Ctrl+C to stop");
-    eprintln!("{}", "=".repeat(60));
     
     stream.play()?;
     
@@ -336,3 +292,4 @@ fn start_continuous_recording() -> Result<()> {
 fn main() -> Result<()> {
     start_continuous_recording()
 }
+

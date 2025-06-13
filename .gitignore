@@ -26,8 +26,8 @@ llama_env/
 /target/
 **/target/
 **/*.rs.bk
-Core/input/app/target/
-Core/input/interface/target/
+Core/input/app/target/*
+Core/input/interface/target/*
 
 # C/C++ build artifacts
 *.o
@@ -77,3 +77,5 @@ Thumbs.db
 *.dSYM/
 *.prof
 *.trace
+Core/input/app/target/debug/automation
+Core/input/app/target/debug/automation
