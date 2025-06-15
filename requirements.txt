@@ -1,0 +1,4 @@
+dspy
+TTS==0.21.0
+simpleaudio
+numpy
