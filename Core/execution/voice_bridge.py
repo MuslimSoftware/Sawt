@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import subprocess
-import sys
 import os
-import warnings
 import dspy
-from TTS.api import TTS
-import numpy
-import simpleaudio as sa
+import edge_tts
+import io
+import soundfile as sf
+import sounddevice as sd
+import asyncio
+from gtts import gTTS
 
 print("Initializing DSPy...")
 lm = dspy.LM(
@@ -20,12 +21,25 @@ print("✅ DSPy ready!")
 
 dspy.configure(lm=lm)
 
-print("Initializing TTS model...")
-print(TTS().list_models())
-tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC", progress_bar=False)
-print("✅ TTS model ready!")
+# en-US-ChristopherNeural
+# en-US-EricNeural
+# en-US-GuyNeural
+# en-US-RogerNeural
+# en-US-SteffanNeural
+async def speak(text, voice="en-US-ChristopherNeural"):
+    communicate = edge_tts.Communicate(text, voice=voice)
+    audio_bytes = bytearray()
+    
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_bytes.extend(chunk["data"])
+    
+    buffer = io.BytesIO(audio_bytes)
+    data, samplerate = sf.read(buffer, dtype="float32")
+    sd.play(data, samplerate)
+    sd.wait()
 
-def main():
+async def main():
     print("Starting voice processing...")
     # Run cargo from workspace root so model path resolves correctly
     workspace_root = "/Users/younesbenketira/Code/personal/Sawt"
@@ -52,22 +66,7 @@ def main():
                 result = agent(input=speechAsText)
                 print("🎧 AI says:", result.output)
 
-                # Generate audio waveform as a NumPy array and sample rate
-                wav = tts.tts(result.output)
-                
-                # Convert float32 audio to int16 for simpleaudio
-                # TTS outputs float32 in range [-1, 1], convert to int16 range [-32768, 32767]
-                if isinstance(wav, list):
-                    wav = np.array(wav)
-                wav = np.clip(wav, -1.0, 1.0)  # Ensure values are in valid range
-                wav_int16 = (wav * 32767).astype(np.int16)
-
-                # Play audio using simpleaudio
-                # Parameters: audio_data, num_channels, bytes_per_sample, sample_rate
-                play_obj = sa.play_buffer(wav_int16.tobytes(), 1, 2, 22050)
-                print("🔊 Playing audio...")
-                play_obj.wait_done()
-                print("✅ Audio finished")
+                await speak(result.output)
 
     except KeyboardInterrupt:
         print("\nStopping voice processing...")
@@ -77,4 +76,4 @@ def main():
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 
