@@ -26,6 +26,9 @@ export default function Page() {
   const [responseText, setResponseText] = useState<string | null>(null);
   const [userMessages, setUserMessages] = useState<string[]>([]);
   const [aiMessages, setAIMessages] = useState<string[]>([]);
+  const [aiSpeaking, setAISpeaking] = useState(false);
+  const [userSpeaking, setUserSpeaking] = useState(false);
+  const lastVoiceRef = useRef<number>(0);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -95,6 +98,9 @@ export default function Page() {
         const blob = new Blob([buf], { type: "audio/mpeg" });
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
+        audio.onplay = () => setAISpeaking(true);
+        audio.onended = () => setAISpeaking(false);
+        audio.onerror = () => setAISpeaking(false);
         audio.play();
       }
     };
@@ -122,6 +128,19 @@ export default function Page() {
           for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
           const rms = Math.sqrt(sum / input.length);
           setVolume(rms); // 0..1 (~)
+
+          const now = Date.now();
+          const voiceThreshold = 0.08;
+          const silenceDelayMs = 600;
+
+          if (rms > voiceThreshold) {
+            lastVoiceRef.current = now;
+            if (!userSpeaking) setUserSpeaking(true);
+          } else {
+            if (userSpeaking && now - lastVoiceRef.current > silenceDelayMs) {
+              setUserSpeaking(false);
+            }
+          }
 
           // Downsample + send to backend
           const downsampled = downsampleBuffer(input, audioCtx.sampleRate, 16000);
@@ -156,19 +175,30 @@ export default function Page() {
   // Circle size & style
   const baseSize = 180; // px starting size
   const maxExtra = 140; // px at loud voice
-  const size = permissionGranted ? baseSize + volume * maxExtra : baseSize;
+  const size = userSpeaking
+    ? baseSize + volume * maxExtra
+    : aiSpeaking
+    ? baseSize + 40 /* fixed bump while AI talks */
+    : baseSize;
 
   const circleStyle: React.CSSProperties = {
     width: size,
     height: size,
     borderRadius: "50%",
-    background: permissionGranted ? "#ffffff" : "#777",
+    background: aiSpeaking
+      ? "#3fa9ff" /* blue */
+      : userSpeaking
+      ? "#28a745" /* green */
+      : "rgba(255,255,255,0.5)",
+    border: permissionGranted ? "2px solid #555" : "2px dashed #555",
     transition:
       "width 0.05s linear, height 0.05s linear, box-shadow 0.05s linear, background 0.3s ease",
-    boxShadow:
-      volume > 0.02 && permissionGranted
-        ? `0 0 ${20 + volume * 80}px rgba(255,255,255,0.75)`
-        : "none",
+    boxShadow: aiSpeaking
+      ? `0 0 ${30 + (Math.sin(Date.now()/150)*10+10)}px rgba(63,169,255,0.9)`
+      : userSpeaking
+      ? `0 0 ${20 + volume * 120}px rgba(40,167,69,0.9)`
+      : "none",
+    backdropFilter: (userSpeaking || aiSpeaking) ? "blur(2px)" : "none",
     margin: "0 auto",
   };
 
@@ -184,7 +214,7 @@ export default function Page() {
 
   const transcriptWrapper: React.CSSProperties = {
     position: "absolute",
-    bottom: "50%", // bottom of list aligns with midline
+    bottom: "50%",
     width: "100%",
   };
 
