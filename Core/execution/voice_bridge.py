@@ -5,6 +5,7 @@ from agent import AIAgent
 import text_to_speech
 import speech_to_text
 import threading, websockets
+import json
 
 RESPONSE_WS_PORT = 8766
 _clients = set()
@@ -28,16 +29,19 @@ def _start_response_ws_server():
     asyncio.set_event_loop(_response_loop)
     _response_loop.run_until_complete(run())
 
-def broadcast_response(text: str):
-    """Send AI response text to all connected WS clients."""
+def broadcast_text(role: str, text: str):
     if not _clients or _response_loop is None:
+        print("No clients or response loop")
         return
+
+    payload = json.dumps({"role": role, "text": text})
 
     async def _send():
         to_remove = []
         for ws in list(_clients):
             try:
-                await ws.send(text)
+                print(f"Sending {payload} to {ws}")
+                await ws.send(payload)
             except Exception:
                 to_remove.append(ws)
         for ws in to_remove:
@@ -71,17 +75,21 @@ async def main():
         process = speech_to_text.start_speech_recognition()
         
         for speech_text in speech_to_text.get_speech_text_stream(process):
-            ai_response = agent.generate_response(speech_text)
+            # send user transcript immediately
+            broadcast_text("user", speech_text)
 
             print(f"\n🎤 SPEECH: {speech_text}")
+
+            # generate AI response
+            ai_response = agent.generate_response(speech_text)
             print(f"🎧 AI says: {ai_response}")
 
-            # Generate TTS audio
+            # send AI transcript
+            broadcast_text("ai", ai_response)
+
+            # Generate TTS audio and stream it
             audio_bytes = await text_to_speech.synthesize_bytes(ai_response)
             broadcast_audio(audio_bytes)
-
-            # Optionally send text too
-            broadcast_response(ai_response)
             
     except KeyboardInterrupt:
         print("\nStopping voice processing...")
