@@ -32,3 +32,15 @@ async def speak(text: str, voice: str = DEFAULT_VOICE) -> None:
         sd.wait()
     except Exception as e:
         print(f"❌ Text-to-speech error: {e}") 
+
+async def synthesize_bytes(text: str, voice: str = DEFAULT_VOICE) -> bytes:
+    """Return TTS audio bytes (MP3) for the given text."""
+    audio_bytes = bytearray()
+    try:
+        communicate = edge_tts.Communicate(text, voice)
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_bytes.extend(chunk["data"])
+    except Exception as e:
+        print(f"❌ TTS synth error: {e}")
+    return bytes(audio_bytes) 

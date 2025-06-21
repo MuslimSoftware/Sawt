@@ -2,3 +2,4 @@ dspy
 edge-tts
 sounddevice
 soundfile
+websockets

@@ -5,6 +5,9 @@ use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use anyhow::Result;
+use clap::Parser;
+use std::io::{self, Read};
+use bytemuck::cast_slice;
 
 extern "C" {
     fn whisper_transcribe(
@@ -289,7 +292,67 @@ fn start_continuous_recording() -> Result<()> {
     }
 }
 
+#[derive(Parser)]
+#[command(author, version, about)]
+struct Args {
+    /// Audio source: "mic" (default) or "stdin"
+    #[arg(short, long, default_value = "mic")]
+    source: String,
+
+    /// Sample-rate of incoming PCM when using stdin
+    #[arg(short = 'r', long, default_value_t = 16000)]
+    sample_rate: u32,
+}
+
+fn start_stdin_stream(sample_rate: u32) -> Result<()> {
+    let mut stdin = io::stdin().lock();
+    let mut buffer: Vec<u8> = Vec::new();
+    let mut temp = [0u8; 4096];
+    let mut recorder = ContinuousRecorder::new(AudioConfig { sample_rate });
+
+    loop {
+        let n = stdin.read(&mut temp)?;
+        if n == 0 {
+            break; // EOF
+        }
+        buffer.extend_from_slice(&temp[..n]);
+
+        // Process whole i16 samples only
+        let sample_bytes = buffer.len() / 2 * 2;
+        if sample_bytes == 0 {
+            continue;
+        }
+
+        let samples_i16: &[i16] = cast_slice(&buffer[..sample_bytes]);
+        let samples: Vec<f32> = samples_i16
+            .iter()
+            .map(|s| *s as f32 / i16::MAX as f32)
+            .collect();
+
+        if let Some(speech_audio) = recorder.process_audio_chunk(&samples) {
+            let resampled = resample_to_16khz(&speech_audio, sample_rate);
+
+            if resampled.len() > 8000 {
+                if let Ok(transcription) = transcribe_audio(&resampled) {
+                    let text = transcription.trim();
+                    if !text.is_empty() && text.len() > 2 {
+                        println!("{}", text);
+                    }
+                }
+            }
+        }
+
+        // Remove processed bytes, keep leftover (if odd number of bytes)
+        buffer.drain(..sample_bytes);
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
-    start_continuous_recording()
+    let args = Args::parse();
+    match args.source.as_str() {
+        "stdin" => start_stdin_stream(args.sample_rate),
+        _ => start_continuous_recording(),
+    }
 }
 
