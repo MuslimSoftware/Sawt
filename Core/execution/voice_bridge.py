@@ -63,6 +63,21 @@ def broadcast_audio(data: bytes):
             _clients.discard(ws)
     asyncio.run_coroutine_threadsafe(_send(), _response_loop)
 
+def broadcast_control(cmd: str):
+    if not _clients or _response_loop is None:
+        return
+    payload = json.dumps({"control": cmd})
+    async def _send():
+        to_remove = []
+        for ws in list(_clients):
+            try:
+                await ws.send(payload)
+            except Exception:
+                to_remove.append(ws)
+        for ws in to_remove:
+            _clients.discard(ws)
+    asyncio.run_coroutine_threadsafe(_send(), _response_loop)
+
 async def main():
     print("Starting voice processing...")
 
@@ -75,6 +90,9 @@ async def main():
         process = speech_to_text.start_speech_recognition()
         
         for speech_text in speech_to_text.get_speech_text_stream(process):
+            # send stop signal to interrupt any ongoing AI audio at clients
+            broadcast_control("stop_audio")
+
             # send user transcript immediately
             broadcast_text("user", speech_text)
 

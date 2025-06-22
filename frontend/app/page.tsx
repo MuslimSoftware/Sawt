@@ -24,21 +24,24 @@ export default function Page() {
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [volume, setVolume] = useState(0);
   const [responseText, setResponseText] = useState<string | null>(null);
-  const [userMessages, setUserMessages] = useState<string[]>([]);
-  const [aiMessages, setAIMessages] = useState<string[]>([]);
-  const [aiSpeaking, setAISpeaking] = useState(false);
   const [userSpeaking, setUserSpeaking] = useState(false);
+  const [aiSpeaking, setAISpeaking] = useState(false);
   const lastVoiceRef = useRef<number>(0);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // Dark mode colors
   const bgColor = "#1a1a1d";
   const textColor = "#f5f5f5";
 
   const fadeLevels = [1, 0.75, 0.55, 0.35, 0.15];
+
+  type ChatMsg = { role: 'user' | 'ai'; text: string };
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
 
   // Connect audio streaming websocket immediately
   useEffect(() => {
@@ -65,16 +68,21 @@ export default function Page() {
       if (typeof e.data === "string") {
         try {
           const obj = JSON.parse(e.data as string);
-          if (obj.role === "user") {
-            console.log("User message", obj.text);
-            setUserMessages((prev) => [...prev, obj.text]);
-          } else if (obj.role === "ai") {
-            console.log("AI message", obj.text);
-            setAIMessages((prev) => [...prev, obj.text]);
+          if (obj.control === "stop_audio") {
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current = null;
+            }
+            return;
+          }
+          if (obj.role === "user" || obj.role === "ai") {
+            const newMsg: ChatMsg = { role: obj.role as 'user' | 'ai', text: obj.text } as ChatMsg;
+            setChatMessages(prev => [newMsg, ...prev].slice(0, 10));
           }
         } catch {
           // plain string fallback
-          setAIMessages((prev) => [...prev, e.data as string]);
+          const newMsg2: ChatMsg = { role: 'ai', text: e.data as string } as ChatMsg;
+          setChatMessages(prev => [newMsg2, ...prev].slice(0, 10));
         }
       } else {
         // Could be audio bytes or JSON in ArrayBuffer (if backend sent text as binary)
@@ -82,13 +90,9 @@ export default function Page() {
         try {
           const txt = new TextDecoder().decode(buf);
           const obj = JSON.parse(txt);
-          if (obj.role === "user") {
-            console.log("User message (bin)", obj.text);
-            setUserMessages((prev) => [...prev, obj.text]);
-            return;
-          } else if (obj.role === "ai") {
-            console.log("AI message (bin)", obj.text);
-            setAIMessages((prev) => [...prev, obj.text]);
+          if (obj.role === "user" || obj.role === "ai") {
+            const newMsg: ChatMsg = { role: obj.role as 'user' | 'ai', text: obj.text } as ChatMsg;
+            setChatMessages(prev => [newMsg, ...prev].slice(0, 10));
             return;
           }
         } catch {
@@ -98,9 +102,12 @@ export default function Page() {
         const blob = new Blob([buf], { type: "audio/mpeg" });
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
-        audio.onplay = () => setAISpeaking(true);
-        audio.onended = () => setAISpeaking(false);
-        audio.onerror = () => setAISpeaking(false);
+        audioRef.current = audio;
+        audio.onplay = () => {
+          setUserSpeaking(false);
+        };
+        audio.onended = () => setUserSpeaking(false);
+        audio.onerror = () => setUserSpeaking(false);
         audio.play();
       }
     };
@@ -123,7 +130,8 @@ export default function Page() {
 
         processor.onaudioprocess = (e) => {
           const input = e.inputBuffer.getChannelData(0);
-          // Volume (root mean square)
+          if (userSpeaking) return;
+
           let sum = 0;
           for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
           const rms = Math.sqrt(sum / input.length);
@@ -178,127 +186,75 @@ export default function Page() {
   const size = userSpeaking
     ? baseSize + volume * maxExtra
     : aiSpeaking
-    ? baseSize + 40 /* fixed bump while AI talks */
-    : baseSize;
+      ? baseSize + 40
+      : baseSize;
 
   const circleStyle: React.CSSProperties = {
     width: size,
     height: size,
     borderRadius: "50%",
-    background: aiSpeaking
-      ? "#3fa9ff" /* blue */
-      : userSpeaking
+    background: userSpeaking
       ? "#28a745" /* green */
-      : "rgba(255,255,255,0.5)",
-    border: permissionGranted ? "2px solid #555" : "2px dashed #555",
+      : "#ffffff",
+    border: "none",
     transition:
       "width 0.05s linear, height 0.05s linear, box-shadow 0.05s linear, background 0.3s ease",
-    boxShadow: aiSpeaking
-      ? `0 0 ${30 + (Math.sin(Date.now()/150)*10+10)}px rgba(63,169,255,0.9)`
-      : userSpeaking
+    boxShadow: userSpeaking
       ? `0 0 ${20 + volume * 120}px rgba(40,167,69,0.9)`
       : "none",
-    backdropFilter: (userSpeaking || aiSpeaking) ? "blur(2px)" : "none",
+    backdropFilter: userSpeaking ? "blur(2px)" : "none",
     margin: "0 auto",
   };
 
   const columnStyle: React.CSSProperties = {
     padding: 20,
-    overflowY: "auto",
-    height: "100%",
     color: textColor,
     display: "flex",
     flexDirection: "column",
-    position: "relative",
-  };
-
-  const transcriptWrapper: React.CSSProperties = {
-    position: "absolute",
-    bottom: "50%",
-    width: "100%",
   };
 
   return (
     <>
-    <main
-      style={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        background: bgColor,
-        color: textColor,
-      }}
-    >
-      {/* Content grid */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 280px 1fr", alignItems: "stretch" }}>
-        {/* User transcript */}
-        <div style={{ ...columnStyle, textAlign: "right", alignItems: "flex-end" }}>
-          <div style={transcriptWrapper}>
-            {userMessages.slice(-5).map((m, idx, arr) => {
-              const pos = arr.length - 1 - idx; // 0 = newest
-              const opacity = fadeLevels[pos] ?? 0.1;
-              const isLatest = pos === 0;
-              return (
-                <p
-                  key={`${idx}-${m}`}
-                  style={{
-                    margin: "4px 0",
-                    opacity,
-                    animation: isLatest ? "fadeInUp 0.4s ease" : undefined,
-                  }}
-                >
-                  {m}
-                </p>
-              );
-            })}
-          </div>
-          <div style={{ marginTop: "auto", paddingTop: 12, alignSelf: "flex-start", textAlign: "left" }}>
-            <span
-              style={{
-                padding: "6px 18px",
-                borderRadius: 9999,
-                background: connected ? "rgba(40,167,69,0.15)" : "rgba(220,53,69,0.15)",
-                color: connected ? "#28a745" : "#dc3545",
-                fontWeight: 600,
-                fontSize: 14,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Status: {connected ? "Online" : "Offline"}
-            </span>
-          </div>
-        </div>
+      <main
+        style={{
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          background: bgColor,
+          color: textColor,
+        }}
+      >
+        <div style={{ flex: 1, display: "flex", justifyContent: "center", flexDirection: "column", alignItems: "center" }}>
+          {/* circle */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: '70%' }}>
+            <div style={circleStyle} />
+            <div style={{ position: "relative", width: "100%" }}>
+              <div style={{ ...columnStyle, position: "absolute", width: '100%', textAlign: 'left', overflowY: 'hidden' }}>
+                {chatMessages.map((msg, idx) => {
+                  const opacity = fadeLevels[idx] ?? 0.1;
+                  const isUser = msg.role === 'user';
+                  return (
+                    <div key={idx} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', opacity, transition: 'opacity 0.3s' }}>
+                      <div style={{
+                        maxWidth: '70%',
+                        padding: '8px 12px',
+                        borderRadius: 12,
+                        background: isUser ? 'transparent' : 'rgba(255,255,255,0.12)',
+                        color: '#f5f5f5',
+                        margin: '4px 0'
+                      }}>{msg.text}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-        {/* center circle */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-          <div style={circleStyle} />
-        </div>
-
-        {/* AI transcript */}
-        <div style={{ ...columnStyle, textAlign: "left", alignItems: "flex-start" }}>
-          <div style={transcriptWrapper}>
-            {aiMessages.slice(-5).map((m, idx, arr) => {
-              const pos = arr.length - 1 - idx;
-              const opacity = fadeLevels[pos] ?? 0.1;
-              const isLatest = pos === 0;
-              return (
-                <p
-                  key={`${idx}-${m}`}
-                  style={{
-                    margin: "4px 0",
-                    opacity,
-                    animation: isLatest ? "fadeInUp 0.4s ease" : undefined,
-                  }}
-                >
-                  {m}
-                </p>
-              );
-            })}
           </div>
+          {/* chat messages */}
+
         </div>
-      </div>
-    </main>
-    <style jsx global>{`
+      </main>
+      <style jsx global>{`
       @keyframes fadeInUp {
         from {
           opacity: 0;
