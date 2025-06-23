@@ -44,10 +44,11 @@ class AIAgent:
             result = self.predict_fn(user_utterance=user_input, conversation_history=self.history)
             ai_response = result.assistant_utterance
 
-            # Update history (append and truncate)
-            self.history.messages.append({"user_utterance": user_input, "assistant_utterance": ai_response})
-            if len(self.history.messages) > self.max_history:
-                self.history.messages = self.history.messages[-self.max_history :]
+            # Build new history list respecting max turns (History is frozen)
+            new_msgs = self.history.messages + [{"user_utterance": user_input, "assistant_utterance": ai_response}]
+            if len(new_msgs) > self.max_history:
+                new_msgs = new_msgs[-self.max_history:]
+            self.history = History(messages=new_msgs)
 
             return ai_response
         except Exception as e:

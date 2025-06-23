@@ -207,7 +207,7 @@ export default function Page() {
   };
 
   const columnStyle: React.CSSProperties = {
-    padding: 20,
+    paddingTop: 50,
     color: textColor,
     display: "flex",
     flexDirection: "column",
@@ -227,9 +227,11 @@ export default function Page() {
         <div style={{ flex: 1, display: "flex", justifyContent: "center", flexDirection: "column", alignItems: "center" }}>
           {/* circle */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: '70%' }}>
-            <div style={circleStyle} />
-            <div style={{ position: "relative", width: "100%" }}>
-              <div style={{ ...columnStyle, position: "absolute", width: '100%', textAlign: 'left', overflowY: 'hidden' }}>
+            <div style={{position: "relative", width: '100%', height: 180}}>
+              <div style={circleStyle} />
+            </div>
+            <div className="chatWrap" style={{ position:'relative' }}>
+              <div style={{ ...columnStyle, position: 'absolute', width:'100%', textAlign:'left', overflowY:'hidden' }}>
                 {chatMessages.map((msg, idx) => {
                   const opacity = fadeLevels[idx] ?? 0.1;
                   const isUser = msg.role === 'user';
@@ -248,10 +250,8 @@ export default function Page() {
                 })}
               </div>
             </div>
-
           </div>
           {/* chat messages */}
-
         </div>
       </main>
       <style jsx global>{`
@@ -266,6 +266,11 @@ export default function Page() {
         }
       }
     `}</style>
+      <style jsx>{`
+        .chatWrap{width:90vw;max-width:90vw;}
+        @media(min-width:768px){.chatWrap{width:30vw;max-width:30vw;}}
+        @media(min-width:1280px){.chatWrap{width:25vw;max-width:25vw;}}
+      `}</style>
     </>
   );
 } 
