@@ -6,22 +6,26 @@ import threading
 import asyncio
 import websockets
 from typing import Generator
+import time
 
 WORKSPACE_ROOT = "/Users/younesbenketira/Code/personal/Sawt"
 WEBSOCKET_PORT = 8765  # Front-end will connect here
 PCM_SAMPLE_RATE = 16000  # Must match --sample-rate passed to Rust
 
+# Exposed globals for other modules (e.g., voice_bridge) to broadcast
+CLIENTS = set()
+WS_LOOP = None
+
 def _start_ws_server(proc_stdin):
     """Run a WebSocket server that forwards binary messages to the Rust stdin."""
 
     async def handler(websocket, *_):
-        print("New WebSocket handler")
+        CLIENTS.add(websocket)
         peer = websocket.remote_address
         print(f"🔌 WebSocket client connected: {peer}")
         try:
             async for msg in websocket:
                 if isinstance(msg, bytes):
-                    # print(f"⬇️  Received audio chunk ({len(msg)} bytes) from {peer}")
                     try:
                         proc_stdin.write(msg)
                         proc_stdin.flush()
@@ -33,16 +37,23 @@ def _start_ws_server(proc_stdin):
         except Exception as e:
             print(f"❌ WebSocket error with {peer}: {e}")
         finally:
+            CLIENTS.discard(websocket)
             print(f"🔌 WebSocket client disconnected: {peer}")
 
     async def run():
         async with websockets.serve(handler, "0.0.0.0", WEBSOCKET_PORT, max_size=None):
             await asyncio.Future()  # run forever
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(run())
+    global WS_LOOP
+    WS_LOOP = asyncio.new_event_loop()
+    asyncio.set_event_loop(WS_LOOP)
+    WS_LOOP.run_until_complete(run())
 
+    # wait until WS_LOOP is initialized by the server thread
+    for _ in range(50):  # up to ~5 seconds
+        if WS_LOOP is not None:
+            break
+        time.sleep(0.1)
 
 def start_speech_recognition():
     """Start the Rust speech recognition subprocess (stdin mode) and WS gateway."""
@@ -75,6 +86,12 @@ def start_speech_recognition():
             target=_start_ws_server, args=(process.stdin,), daemon=True
         )
         server_thread.start()
+
+        # wait until WS_LOOP set by server thread
+        for _ in range(50):
+            if WS_LOOP is not None:
+                break
+            time.sleep(0.1)
 
         print(
             f"🛰️  WebSocket audio server running on ws://localhost:{WEBSOCKET_PORT} (16 kHz LE16 mono)"
