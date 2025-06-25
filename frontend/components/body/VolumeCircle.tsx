@@ -10,8 +10,8 @@ export const VolumeCircle = ({ level }: VolumeCircleProps) => {
   return (
     <div
       style={{
-        position: 'absolute',
-        inset: '0',
+        width: "20vw",
+        height: "100vh",
         display: 'grid',
         placeItems: 'center',
       }}
@@ -21,7 +21,7 @@ export const VolumeCircle = ({ level }: VolumeCircleProps) => {
           width:  size,
           height: size,
           borderRadius: '50%',
-          background: 'hotpink',
+          background: 'rgba(255,255,255,0.9)',
           transition: 'width 50ms linear, height 50ms linear',
         }}
       />

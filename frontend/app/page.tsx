@@ -1,31 +1,29 @@
 "use client";
 
 import React from "react";
-import { useChat } from "@/contexts/ChatContext";
-import { useChatWebsocket } from "@/api/useChatWebsocket";
-import { useChatMicrophone } from "@/hooks/useChatMicrophone";
-import { MicrophoneVisualizer } from "@/components/MicrophoneVisualizer";
+import { useChatWebsocket } from "@/hooks/chat/useChatWebsocket";
+import { useChatMicrophone } from "@/hooks/chat/useChatMicrophone";
+import { BadgeHeader } from "@/components/header/BadgeHeader";
+import { CenterContent } from "@/components/body/CenterContent";
 
 export default function Page() {
-  const { messages, setMessages } = useChat();
   const { sendData, playbackStream, isConnected, isConnecting, error } =
-    useChatWebsocket();
-  const { micStream } = useChatMicrophone(sendData);
+  useChatWebsocket();
+  const { micStream, isMicrophoneGranted, muted, toggleMute } = useChatMicrophone(sendData);
 
   return (
     <main
       style={{
-        flex: 1,
+        width: "100%",
+        height: "100%",
         display: "flex",
         justifyContent: "center",
         flexDirection: "column",
         alignItems: "center",
       }}
     >
-      <MicrophoneVisualizer
-        micStream={micStream}
-        playbackStream={playbackStream}
-      />
+      <CenterContent micStream={micStream} playbackStream={playbackStream} muted={muted} />
+      <BadgeHeader ws={{connected:isConnected,connecting:isConnecting,error:error?.toString()||null}} mic={{granted:isMicrophoneGranted,muted,onToggle:toggleMute}} />
     </main>
   );
 } 

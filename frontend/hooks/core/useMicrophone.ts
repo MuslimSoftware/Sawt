@@ -32,20 +32,24 @@ export function useMicrophone({ onData, onStart, onStop, voiceThreshold, silence
           return mic.getTracks().forEach(t => t.stop());
 
         await ctx.audioWorklet.addModule(WORKLET_URL);
+
         if (ctx.state !== 'running') {
           try { await ctx.resume(); } catch {}
         }
+
         if (cancelled) 
           return mic.getTracks().forEach(t => t.stop());
 
         const node = new AudioWorkletNode(ctx, 'down-sampler', {
           processorOptions: { voiceThreshold, silenceDelayMs },
         } as any);
+        
         node.port.onmessage = ({ data }) => {
           if (data.audio) onData?.(data.audio);
           if (data.event === 'start') onStart?.();
           if (data.event === 'stop')  onStop?.();
         };
+
         ctx.createMediaStreamSource(mic).connect(node);
         node.connect(ctx.destination);
 
@@ -67,5 +71,5 @@ export function useMicrophone({ onData, onStart, onStop, voiceThreshold, silence
     };
   }, []);
 
-  return { isMicrophoneGranted: granted, micStream: stream };
+  return { isMicrophoneGranted: granted, micStream: stream, ctx: ctxRef.current } as const;
 }

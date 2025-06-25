@@ -4,6 +4,7 @@ import os
 import dspy
 import warnings
 from dspy import History
+import litellm
 
 # Suppress Pydantic serializer warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
@@ -53,4 +54,7 @@ class AIAgent:
             return ai_response
         except Exception as e:
             print(f"❌ Error generating response: {e}")
-            return "Sorry, I couldn't process that request." 
+            return f"Error Occured: {e.args[0][:10]}" 
+        except litellm.exceptions.RateLimitError as e:
+            print(f"❌ Rate limit error: {e}")
+            return "Error Occured: Rate Limit Exceeded"

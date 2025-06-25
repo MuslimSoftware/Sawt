@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 interface Options {
   /** Decoded audio coming back from the server (optional). */
   playbackStream?: MediaStream | null;
+  muted?: boolean;
 }
 
 /**
@@ -11,7 +12,7 @@ interface Options {
  */
 export const useAudioLevel = (
   micStream: MediaStream | null,
-  { playbackStream }: Options = {}
+  { playbackStream, muted = false }: Options = {}
 ) => {
   const [level, setLevel] = useState(0);
 
@@ -31,8 +32,11 @@ export const useAudioLevel = (
           numberOfOutputs: 0,
         });
 
-        // mic → input 0
-        ctx.createMediaStreamSource(micStream).connect(meter, 0, 0);
+        // mic → input 0 (via gain for mute control)
+        const micSrc = ctx.createMediaStreamSource(micStream);
+        const micGain = ctx.createGain();
+        micGain.gain.value = muted ? 0 : 1;
+        micSrc.connect(micGain).connect(meter, 0, 0);
 
         // server playback → input 1
         if (playbackStream)
@@ -49,9 +53,9 @@ export const useAudioLevel = (
     return () => {
       cancelled = true;
       ctx.close().catch(() => {});
-      // We *didn’t* create the streams, so we don’t stop their tracks here.
+      // We *didn't* create the streams, so we don't stop their tracks here.
     };
-  }, [micStream, playbackStream]);
+  }, [micStream, playbackStream, muted]);
 
   return {level};
 };
