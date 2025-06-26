@@ -7,7 +7,7 @@ interface LatestMessageProps {
 
 export const LatestMessage = ({role}: LatestMessageProps) => {
     const { messages } = useChat();
-    const latestMessage = useMemo(() => messages.find(message => message.role === role)?.content, [messages, role]);
+    const latestMessage = useMemo(() => messages.findLast(message => message.role === role)?.content, [messages, role]);
 
     return (
         <div style={{

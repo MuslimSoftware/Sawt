@@ -75,16 +75,23 @@ async def main():
         process = speech_to_text.start_speech_recognition()
         
         for speech_text in speech_to_text.get_speech_text_stream(process):
-            # send stop signal to interrupt any ongoing AI audio at clients
-            broadcast_control("stop_audio")
-
+            print(f"\n🎤 SPEECH: {speech_text}")
             # send user transcript immediately
             broadcast_text("user", speech_text)
 
-            print(f"\n🎤 SPEECH: {speech_text}")
+            is_directed_at_agent, is_directed_at_agent_reasoning = agent.get_classification_response(speech_text)
+            if not is_directed_at_agent:
+                print(f"👤 User is not directing at the agent: {is_directed_at_agent_reasoning}")
+                broadcast_text("ai", "[Ignored since not directed at agent]")
+                continue
+            else:
+                print(f"👤 User is directing at the agent: {is_directed_at_agent_reasoning}")
+
+            # send stop signal to interrupt any ongoing AI audio at clients
+            broadcast_control("stop_audio")
 
             # generate AI response
-            ai_response = agent.generate_response(speech_text)
+            ai_response = agent.get_conversation_response(speech_text)
             print(f"🎧 AI says: {ai_response}")
 
             # send AI transcript
