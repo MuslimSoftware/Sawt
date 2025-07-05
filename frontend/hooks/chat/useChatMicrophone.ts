@@ -1,30 +1,52 @@
 import { useMicrophone } from "@/hooks/core/useMicrophone";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+
+// Toggle this to test different muting strategies
+const USE_AUDIO_CONTEXT_SUSPEND = false; // Set to true to use suspend/resume, false for audio-only filtering
 
 export const useChatMicrophone = (sendData: (data: string | ArrayBuffer) => void) => {
     const [muted, setMuted] = useState(false);
+    const mutedRef = useRef(muted);
+
+    // Keep ref in sync with state
+    useEffect(() => {
+        mutedRef.current = muted;
+    }, [muted]);
 
     const onData = useCallback((buf: ArrayBuffer) => {
-        if (!muted) {
+        if (!mutedRef.current) {
           sendData(buf);
         }
-      }, [sendData, muted]);
+      }, [sendData]);
 
     const onStart = useCallback(() => {
-      console.log("[useChatMicrophone] Start speaking");
-    }, []);
-
-    const onStop = useCallback(() => {
-      console.log("[useChatMicrophone] Stop speaking");
+      // Voice started
     }, []);
     
-    const { isMicrophoneGranted, micStream, ctx } = useMicrophone({ onData, onStart, onStop, voiceThreshold: 0.05, silenceDelayMs: 1000 });
+    const { isMicrophoneGranted, micStream, ctx } = useMicrophone({ onData, onStart, voiceThreshold: 0.05 });
 
     useEffect(() => {
         if (!ctx) return;
-        if (muted) ctx.suspend().catch(() => {});
-        else ctx.state !== 'running' && ctx.resume().catch(() => {});
+        
+        if (USE_AUDIO_CONTEXT_SUSPEND) {
+            if (muted) {
+                ctx.suspend().catch(() => {});
+            } else {
+                if (ctx.state !== 'running') {
+                    ctx.resume().catch(() => {});
+                }
+            }
+        } else {
+            // Keep AudioContext running, just filter audio data in onData callback
+            if (ctx.state !== 'running') {
+                ctx.resume().catch(() => {});
+            }
+        }
     }, [muted, ctx]);
 
-    return { isMicrophoneGranted, micStream, muted, toggleMute: () => setMuted(m => !m) };
+    const toggleMute = useCallback(() => {
+        setMuted(m => !m);
+    }, [muted]);
+
+    return { isMicrophoneGranted, micStream, muted, toggleMute };
 }   

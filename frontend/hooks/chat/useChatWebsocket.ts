@@ -13,7 +13,7 @@ export const useChatWebsocket = () => {
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
-      console.log("Received message:", event.data);
+      // console.log("Received message:", event.data);
       // Play incoming audio stream
       if (event.data instanceof ArrayBuffer) {
         play(event.data);

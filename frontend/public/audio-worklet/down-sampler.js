@@ -3,16 +3,16 @@ class VoiceActivityDetector extends AudioWorkletProcessor {
   constructor(options) {
     super();
     this.voiceThreshold = options?.processorOptions?.voiceThreshold || 0.08;
-    this.silenceDelayMs = options?.processorOptions?.silenceDelayMs || 600;
     this.lastVoiceTime = 0;
     this.isSpeaking = false;
   }
 
   process([input]) {
+    const now = currentTime * 1000;
     const chan = input[0];
+    
     if (!chan) {
-        console.log("[VoiceActivityDetector] No channel");
-        return true;
+      return true;
     }
 
     // --- RMS volume
@@ -21,7 +21,6 @@ class VoiceActivityDetector extends AudioWorkletProcessor {
     const rms = Math.sqrt(sumSq / chan.length);
 
     // --- VAD
-    const now = currentTime * 1000;
     if (rms > this.voiceThreshold) {
       this.lastVoiceTime = now;
       if (!this.isSpeaking) {
@@ -37,13 +36,12 @@ class VoiceActivityDetector extends AudioWorkletProcessor {
       for (let i = 0; i < pcm.length; i++) {
         pcm[i] = Math.max(-1, Math.min(1, chan[i * step])) * 0x7fff;
       }
-      this.port.postMessage({ audio: pcm.buffer }, [pcm.buffer]);
-    }
-
-    // --- stop event
-    if (this.isSpeaking && now - this.lastVoiceTime > this.silenceDelayMs) {
-      this.isSpeaking = false;
-      this.port.postMessage({ event: 'stop' });
+      
+      try {
+        this.port.postMessage({ audio: pcm.buffer }, [pcm.buffer]);
+      } catch (err) {
+        console.error('Audio worklet error:', err);
+      }
     }
     
     return true;

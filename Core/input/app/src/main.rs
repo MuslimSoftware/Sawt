@@ -42,7 +42,7 @@ impl VoiceActivityDetector {
             speech_frames: 0,
             silence_frames: 0,
             min_speech_frames: 5,    // ~100ms at 48kHz with 1024 samples per frame
-            min_silence_frames: 50,  // ~1000ms (1 second) of silence to end speech
+            min_silence_frames: 250, // ~2500ms (2.5 seconds) of silence to end speech
             is_speech_active: false,
         }
     }

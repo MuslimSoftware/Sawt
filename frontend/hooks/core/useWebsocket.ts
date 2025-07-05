@@ -45,7 +45,7 @@ export const useWebsocket = (
 
     ws.onopen = () => dispatch({ type: "open" });
     ws.onclose = () => dispatch({ type: "close" });
-    ws.onerror = () => dispatch({ type: "error", msg: "ws error" });
+    ws.onerror = (e: ErrorEvent) => dispatch({ type: "error", msg: e.message });
     ws.onmessage = onMessage;
 
     wsRef.current = ws;
