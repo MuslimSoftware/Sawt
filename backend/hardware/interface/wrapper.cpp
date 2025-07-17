@@ -8948,7 +8948,7 @@ extern "C" const char* whisper_transcribe(const char* model_path, const float* a
             whisper_free(g_whisper_ctx);
         }
         
-        // Load model with default parameters
+        // Load model with optimized parameters
         struct whisper_context_params cparams = whisper_context_default_params();
         g_whisper_ctx = whisper_init_from_file_with_params(model_path, cparams);
         if (!g_whisper_ctx) return strdup("Failed to load model");
@@ -8956,7 +8956,7 @@ extern "C" const char* whisper_transcribe(const char* model_path, const float* a
         g_model_path = current_model_path;
     }
 
-    // 2. Set parameters
+    // 2. Set parameters for optimal speed
     whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     params.print_progress = false;
     params.print_realtime = false;
@@ -8964,6 +8964,16 @@ extern "C" const char* whisper_transcribe(const char* model_path, const float* a
     params.translate = false;
     params.no_context = true;
     params.single_segment = true;
+    
+    // Speed optimizations
+    params.n_threads = std::thread::hardware_concurrency(); // Use all CPU cores
+    params.max_len = 32; // Limit output length for faster processing
+    params.max_initial_ts = 1.0f; // Faster initial timestamp
+    params.temperature = 0.0f; // Deterministic output
+    params.temperature_inc = 0.0f;
+    params.entropy_thold = 2.4f; // Higher threshold for faster processing
+    params.logprob_thold = -1.0f; // Lower threshold for faster processing
+    params.no_speech_thold = 0.6f; // Higher threshold to skip silence faster
 
     // 3. Run Whisper
     if (whisper_full(g_whisper_ctx, params, audio_data, num_samples) != 0) {

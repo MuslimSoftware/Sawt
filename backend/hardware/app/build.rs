@@ -16,9 +16,17 @@ fn main() {
     println!("cargo:rustc-link-lib=framework=MetalKit");
     println!("cargo:rustc-link-lib=framework=Foundation");
 
-    cc::Build::new()
-        .cpp(true)
+    // Set optimization flags for C++ compilation
+    let mut build = cc::Build::new();
+    build.cpp(true)
         .file("../interface/wrapper.cpp")
-        .include("../interface/headers/include")
-        .compile("whisper_backend");
+        .include("../interface/headers/include");
+    
+    // Add optimization flags (only in release mode to avoid conflicts)
+    if cfg!(debug_assertions) == false {
+        build.flag("-O3")
+             .flag("-ffast-math");
+    }
+    
+    build.compile("whisper_backend");
 }
