@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { colors, spacing, borderRadius, shadows } from "@/theme/colors";
 
 interface Props {
   connected: boolean;
@@ -9,29 +10,28 @@ interface Props {
 }
 
 const pillStyle: React.CSSProperties = {
-
-  padding: "6px 14px",
-  borderRadius: 9999,
+  padding: `${spacing.sm} ${spacing.xl}`,
+  borderRadius: borderRadius.pill,
   fontSize: 14,
   fontWeight: 500,
-  color: "#fff",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+  color: colors.text.secondary,
+  boxShadow: shadows.sm,
   zIndex: 1000,
 };
 
 export const WebsocketStatusPill: React.FC<Props> = ({ connected, connecting, error }) => {
   let text = "Disconnected";
-  let bg = "#dc3545"; // red
+  let bg: string = colors.status.error;
 
   if (connecting) {
     text = "Connecting…";
-    bg = "rgba(255,193,7,0.4)"; // yellow
+    bg = colors.status.warning;
   } else if (connected) {
     text = "Connected";
-    bg = "rgba(40,167,69,0.4)"; // green
+    bg = colors.status.success;
   } else if (error) {
     text = "Error";
-    bg = "rgba(220,53,69,0.4)"; // red
+    bg = colors.status.error;
   }
 
   return (

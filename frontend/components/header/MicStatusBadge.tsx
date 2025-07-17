@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Mic, MicOff, Ban } from 'lucide-react';
+import { colors, spacing, borderRadius, shadows } from "@/theme/colors";
 
 interface Props {
   granted: boolean;
@@ -11,14 +12,14 @@ interface Props {
 
 const style: React.CSSProperties = {
   position: "relative",
-  padding: "6px 14px",
-  borderRadius: 9999,
+  padding: `${spacing.sm} ${spacing.xl}`,
+  borderRadius: borderRadius.pill,
   fontSize: 18,
   fontWeight: 500,
-  color: "#fff",
-  background: "rgba(255,255,255,0.15)",
+  color: colors.text.secondary,
+  background: colors.ui.backdrop,
   backdropFilter: "blur(6px)",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+  boxShadow: shadows.sm,
   cursor: "pointer",
   userSelect: "none",
   zIndex: 1000,
@@ -31,11 +32,11 @@ const iconSize = 18;
 
 export const MicStatusBadge: React.FC<Props> = ({ granted, muted, onToggle }) => {
   const icon = granted ? (muted ? <MicOff size={iconSize}/> : <Mic size={iconSize}/> ) : <Ban size={iconSize}/>;
-  const bg = granted
+  const bg: string = granted
     ? muted
-      ? "rgba(220,53,69,0.4)"
-      : "rgba(40,167,69,0.4)"
-    : "rgba(108,117,125,0.5)"; // gray
+      ? colors.status.error
+      : colors.status.success
+    : colors.status.disabled;
 
   return (
     <div

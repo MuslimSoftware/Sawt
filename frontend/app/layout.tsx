@@ -1,4 +1,5 @@
 import { ChatProvider } from "@/contexts/ChatContext";
+import { colors } from "@/theme/colors";
 
 export const metadata = {
   title: 'Sawt',
@@ -17,7 +18,15 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body style={{ fontFamily: 'Roboto, sans-serif', background: '#1a1a1d', color: '#f5f5f5', margin: 0, overflow: 'hidden', width: "100vw", height: "100vh" }}>
+      <body style={{ 
+        fontFamily: 'Roboto, sans-serif', 
+        background: colors.background.primary, 
+        color: colors.text.primary, 
+        margin: 0, 
+        overflow: 'hidden', 
+        width: "100vw", 
+        height: "100vh" 
+      }}>
         <ChatProvider>{children}</ChatProvider>
       </body>
     </html>
