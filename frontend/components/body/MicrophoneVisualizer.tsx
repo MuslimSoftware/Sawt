@@ -10,7 +10,7 @@ type MicrophoneVisualizerProps = {
 };
 
 export const MicrophoneVisualizer = ({ micStream, playbackStream, muted }: MicrophoneVisualizerProps) => {
-    const { level } = useAudioLevel(micStream, { playbackStream: playbackStream, muted });
+    const { micLevel, playbackLevel } = useAudioLevel(micStream, { playbackStream: playbackStream, muted });
 
-    return <VolumeCircle level={level} />;
+    return <VolumeCircle micLevel={micLevel} playbackLevel={playbackLevel} />;
 }; 

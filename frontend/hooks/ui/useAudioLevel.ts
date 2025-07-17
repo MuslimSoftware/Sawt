@@ -7,14 +7,14 @@ interface Options {
 }
 
 /**
- * Returns a single RMS-style level (0-1) that reflects both the microphone
- * and an optional playback stream.
+ * Returns separate RMS-style levels (0-1) for microphone and playback streams.
  */
 export const useAudioLevel = (
   micStream: MediaStream | null,
   { playbackStream, muted = false }: Options = {}
 ) => {
-  const [level, setLevel] = useState(0);
+  const [micLevel, setMicLevel] = useState(0);
+  const [playbackLevel, setPlaybackLevel] = useState(0);
 
   useEffect(() => {
     if (!micStream) return;
@@ -27,23 +27,34 @@ export const useAudioLevel = (
         await ctx.audioWorklet.addModule('/audio-worklet/level-meter.js');
         if (cancelled) return;                     // context is dead
 
-        const meter = new AudioWorkletNode(ctx, 'level-meter', {
-          numberOfInputs : 2,
+        // Create separate meters for mic and playback
+        const micMeter = new AudioWorkletNode(ctx, 'level-meter', {
+          numberOfInputs : 1,
           numberOfOutputs: 0,
         });
 
-        // mic → input 0 (via gain for mute control)
+        const playbackMeter = new AudioWorkletNode(ctx, 'level-meter', {
+          numberOfInputs : 1,
+          numberOfOutputs: 0,
+        });
+
+        // mic → mic meter (via gain for mute control)
         const micSrc = ctx.createMediaStreamSource(micStream);
         const micGain = ctx.createGain();
         micGain.gain.value = muted ? 0 : 1;
-        micSrc.connect(micGain).connect(meter, 0, 0);
+        micSrc.connect(micGain).connect(micMeter, 0, 0);
 
-        // server playback → input 1
-        if (playbackStream)
-          ctx.createMediaStreamSource(playbackStream).connect(meter, 0, 1);
+        // server playback → playback meter
+        if (playbackStream) {
+          ctx.createMediaStreamSource(playbackStream).connect(playbackMeter, 0, 0);
+        }
 
-        meter.port.onmessage = (e) => {
-          if (!cancelled) setLevel(e.data as number);
+        micMeter.port.onmessage = (e) => {
+          if (!cancelled) setMicLevel(e.data as number);
+        };
+
+        playbackMeter.port.onmessage = (e) => {
+          if (!cancelled) setPlaybackLevel(e.data as number);
         };
       } catch (err) {
         console.error(err);
@@ -57,5 +68,5 @@ export const useAudioLevel = (
     };
   }, [micStream, playbackStream, muted]);
 
-  return {level};
+  return { micLevel, playbackLevel };
 };
