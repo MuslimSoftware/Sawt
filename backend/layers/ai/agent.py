@@ -12,21 +12,21 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 class ConversationSig(dspy.Signature):
     """
-    You are a helpful assistant that can answer questions and help with tasks.
-    You are not a human, and do not have a personality.
-    You do not respond with any special characters, only the alphabet.
+    You are a helpful voice assistant that can answer general questions conversationally.
+    You respond with plain conversational text, no markdown or code or any special characters.
+    Your responses should be in clear conversational style, so that it can be converted to speech without problems.
     """
 
     user_utterance: str = dspy.InputField(desc="What the user just said, as plain text from speech.")
     conversation_history: History = dspy.InputField(desc="Previous turns of the voice conversation.")
-    assistant_utterance: str = dspy.OutputField(desc="How the assistant should speak back – plain conversational text, no markdown or code.")
+    assistant_utterance: str = dspy.OutputField(desc="How the assistant should speak back – plain conversational text, no markdown or code or special characters. Respond in short sentences and paragraphs. Maximum 3-4 sentences.")
 
 class ClassificationSig(dspy.Signature):
     """
-    You are a helpful assistant that can classify whether the user's utterance is directed at the agent.
-    The user's utterance is directed at the agent if it is making a request to the agent, either not referring to who the request is directed at or clearly referring to the agent.
-    The user's utterance is not directed at the agent if it is not making a request to the agent, or if it is referring to someone else.
-    The agent is a helpful assistant that can answer questions and help with tasks.
+    Determine whether the user's utterance is directed at the agent or not.
+    It is directed at the agent if it's a question or a non-ambigious request to the agent.
+    If unsure return False.
+    Only return True if the user's utterance is referencing something in the conversation history or a clear question that is non-ambiguous.
     """
 
     user_utterance: str = dspy.InputField(desc="What the user just said, as plain text from speech.")

@@ -41,14 +41,14 @@ export const VolumeCircle = ({ micLevel, playbackLevel }: VolumeCircleProps) => 
           50% { opacity: 0.6; }
         }
       `}</style>
-      <div
-        style={{
-          width: "20vw",
-          height: "100vh",
-          display: 'grid',
-          placeItems: 'center',
-        }}
-      >
+    <div
+      style={{
+        width: "20vw",
+        height: "100vh",
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
       <div
         style={{
           width: baseSize,
@@ -60,8 +60,8 @@ export const VolumeCircle = ({ micLevel, playbackLevel }: VolumeCircleProps) => 
           boxShadow: boxShadow,
           animation: isLoading ? `pulse ${animations.pulse.duration} ${animations.pulse.timing} infinite` : 'none',
         }}
-              />
-      </div>
+      />
+    </div>
     </>
   );
 };

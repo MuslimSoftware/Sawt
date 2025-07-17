@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import { useDebouncedBoolean } from '@/hooks/base/useDebouncedBoolean';
+import { useSpeakingHistory } from '@/hooks/chat/useSpeakingHistory';
 
 interface UseSpeakingStateProps {
   micLevel: number;
@@ -24,61 +26,44 @@ export const useSpeakingState = ({
   userDelay = 500,
   agentDelay = 1200, // Increased delay to prevent flickering between words
 }: UseSpeakingStateProps): SpeakingState => {
-  const [isUserSpeakingDebounced, setIsUserSpeakingDebounced] = useState(false);
-  const [isAgentSpeakingDebounced, setIsAgentSpeakingDebounced] = useState(false);
-  const [wasUserSpeaking, setWasUserSpeaking] = useState(false);
+  // Memoize immediate speaking states
+  const isUserSpeaking = useMemo(() => micLevel > userThreshold, [micLevel, userThreshold]);
+  const isAgentSpeaking = useMemo(() => playbackLevel > agentThreshold, [playbackLevel, agentThreshold]);
 
-  // Determine immediate speaking states
-  const isUserSpeaking = micLevel > userThreshold;
-  const isAgentSpeaking = playbackLevel > agentThreshold;
+  // Debounce the speaking states
+  const isUserSpeakingDebounced = useDebouncedBoolean(isUserSpeaking, userDelay);
+  const isAgentSpeakingDebounced = useDebouncedBoolean(isAgentSpeaking, agentDelay);
 
-  // Track when user was speaking
-  useEffect(() => {
-    if (isUserSpeaking) {
-      setWasUserSpeaking(true);
-    }
-  }, [isUserSpeaking]);
+  // Track speaking history
+  const wasUserSpeaking = useSpeakingHistory(
+    isUserSpeaking,
+    isAgentSpeakingDebounced,
+    isUserSpeakingDebounced,
+    isAgentSpeaking
+  );
 
-  // Debounce the speaking states with delays
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsUserSpeakingDebounced(isUserSpeaking);
-    }, isUserSpeaking ? 0 : userDelay);
+  // Memoize loading state
+  const isLoading = useMemo(() => 
+    !isUserSpeakingDebounced && 
+    !isAgentSpeakingDebounced && 
+    wasUserSpeaking && 
+    !isAgentSpeaking,
+    [isUserSpeakingDebounced, isAgentSpeakingDebounced, wasUserSpeaking, isAgentSpeaking]
+  );
 
-    return () => clearTimeout(timer);
-  }, [isUserSpeaking, userDelay]);
+  // Memoize final states with priority logic
+  const finalStates = useMemo(() => {
+    const finalUserSpeaking = isUserSpeakingDebounced && !isAgentSpeakingDebounced;
+    const finalAgentSpeaking = isAgentSpeakingDebounced;
+    const finalSilent = !finalUserSpeaking && !finalAgentSpeaking && !isLoading;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsAgentSpeakingDebounced(isAgentSpeaking);
-      // Reset wasUserSpeaking when agent starts speaking
-      if (isAgentSpeaking) {
-        setWasUserSpeaking(false);
-      }
-    }, isAgentSpeaking ? 0 : agentDelay);
+    return {
+      isUserSpeaking: finalUserSpeaking,
+      isAgentSpeaking: finalAgentSpeaking,
+      isSilent: finalSilent,
+      isLoading,
+    };
+  }, [isUserSpeakingDebounced, isAgentSpeakingDebounced, isLoading]);
 
-    return () => clearTimeout(timer);
-  }, [isAgentSpeaking, agentDelay]);
-
-  // Reset wasUserSpeaking after a timeout if agent doesn't respond
-  useEffect(() => {
-    if (wasUserSpeaking && !isUserSpeakingDebounced && !isAgentSpeaking) {
-      const timeout = setTimeout(() => {
-        setWasUserSpeaking(false);
-      }, 5000); // 5 second timeout
-
-      return () => clearTimeout(timeout);
-    }
-  }, [wasUserSpeaking, isUserSpeakingDebounced, isAgentSpeaking]);
-
-  // Determine loading state: when user stopped speaking but agent hasn't started yet
-  const isLoading = !isUserSpeakingDebounced && !isAgentSpeakingDebounced && 
-                   wasUserSpeaking && !isAgentSpeaking; // Show loading when user was speaking but stopped and agent isn't speaking yet
-
-  return {
-    isUserSpeaking: isUserSpeakingDebounced,
-    isAgentSpeaking: isAgentSpeakingDebounced,
-    isSilent: !isUserSpeakingDebounced && !isAgentSpeakingDebounced && !isLoading,
-    isLoading,
-  };
+  return finalStates;
 }; 
