@@ -14,18 +14,18 @@ export const colors = {
   
   // Microphone visualizer states
   microphone: {
-    userSpeaking: 'rgba(76, 175, 80, 0.9)', // Green
-    agentSpeaking: 'rgba(33, 150, 243, 0.9)', // Full blue
-    loading: 'rgba(33, 150, 243, 0.3)', // Transparent blue
-    silent: 'rgba(255, 255, 255, 0.9)', // White
+    userSpeaking: '#22c55e', // More vibrant green
+    agentSpeaking: '#3b82f6', // Full blue
+    loading: 'rgba(59, 130, 246, 0.3)', // Transparent blue
+    silent: '#ffffff', // White
   },
   
   // Microphone visualizer glows
   microphoneGlow: {
-    userSpeaking: 'rgba(76, 175, 80, 0.4)',
-    agentSpeaking: 'rgba(33, 150, 243, 0.4)',
-    loading: 'rgba(33, 150, 243, 0.2)',
-    silent: 'rgba(255, 255, 255, 0.15)',
+    userSpeaking: 'rgba(34, 197, 94, 0.3)', // More vibrant green glow
+    agentSpeaking: 'rgba(59, 130, 246, 0.3)', // Blue glow
+    loading: 'rgba(59, 130, 246, 0.2)', // Transparent blue glow
+    silent: 'rgba(255, 255, 255, 0.1)', // Subtle white glow
   },
   
   // Status pill colors (original colors)
