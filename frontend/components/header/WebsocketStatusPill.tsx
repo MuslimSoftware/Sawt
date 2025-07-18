@@ -1,23 +1,14 @@
 "use client";
 
 import React from "react";
-import { colors, spacing, borderRadius, shadows } from "@/theme/colors";
+import { colors } from "@/theme/colors";
+import styles from "./WebsocketStatusPill.module.css";
 
 interface Props {
   connected: boolean;
   connecting: boolean;
   error: string | null;
 }
-
-const pillStyle: React.CSSProperties = {
-  padding: `${spacing.sm} ${spacing.xl}`,
-  borderRadius: borderRadius.pill,
-  fontSize: 14,
-  fontWeight: 500,
-  color: colors.text.secondary,
-  boxShadow: shadows.sm,
-  zIndex: 1000,
-};
 
 export const WebsocketStatusPill: React.FC<Props> = ({ connected, connecting, error }) => {
   let text = "Disconnected";
@@ -35,7 +26,7 @@ export const WebsocketStatusPill: React.FC<Props> = ({ connected, connecting, er
   }
 
   return (
-    <div style={{ ...pillStyle, background: bg }}>
+    <div className={styles.pill} style={{ background: bg }}>
       {text}
     </div>
   );

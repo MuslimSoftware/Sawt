@@ -1,5 +1,6 @@
 import { LatestMessage } from "./LatestMessage";
 import { MicrophoneVisualizer } from "./MicrophoneVisualizer";
+import styles from "./CenterContent.module.css";
 
 interface CenterContentProps {
     micStream: MediaStream | null;
@@ -9,24 +10,37 @@ interface CenterContentProps {
 
 export const CenterContent = ({micStream, playbackStream, muted}: CenterContentProps) => {
     return (
-        <div style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            justifyContent: "center",
-            flexDirection: "row",
-            gap: "clamp(2vw, 5vw, 8vw)",
-            alignItems: "center",
-            padding: "0 20px",
-            boxSizing: "border-box",
-        }}>
-            <LatestMessage role="user" />
-            <MicrophoneVisualizer
-                micStream={micStream}
-                playbackStream={playbackStream}
-                muted={muted}
-            />
-            <LatestMessage role="ai" />
+        <div className={styles.container}>
+            {/* Desktop layout - horizontal */}
+            <div className={styles.desktopLayout}>
+                <LatestMessage role="user" />
+                <MicrophoneVisualizer
+                    micStream={micStream}
+                    playbackStream={playbackStream}
+                    muted={muted}
+                />
+                <LatestMessage role="ai" />
+            </div>
+
+            {/* Mobile layout - vertical */}
+            <div className={styles.mobileLayout}>
+                {/* User message above circle */}
+                <div className={styles.mobileTopMessages}>
+                    <LatestMessage role="user" />
+                </div>
+                
+                {/* Center circle */}
+                <MicrophoneVisualizer
+                    micStream={micStream}
+                    playbackStream={playbackStream}
+                    muted={muted}
+                />
+                
+                {/* Agent message below circle */}
+                <div className={styles.mobileBottomMessages}>
+                    <LatestMessage role="ai" />
+                </div>
+            </div>
         </div>
     )
 }

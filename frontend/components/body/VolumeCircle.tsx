@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useSpeakingState } from "@/hooks/ui/useSpeakingState";
-import { colors, animations, borderRadius, shadows } from "@/theme/colors";
+import { colors } from "@/theme/colors";
+import styles from "./VolumeCircle.module.css";
 
 type VolumeCircleProps = { 
     micLevel: number; 
@@ -8,8 +9,6 @@ type VolumeCircleProps = {
 };
 
 export const VolumeCircle = ({ micLevel, playbackLevel }: VolumeCircleProps) => {
-    const baseSize = 150;
-    
     const { isUserSpeaking, isAgentSpeaking, isSilent, isLoading } = useSpeakingState({
         micLevel,
         playbackLevel,
@@ -33,35 +32,20 @@ export const VolumeCircle = ({ micLevel, playbackLevel }: VolumeCircleProps) => 
         return 'none';
     }, [isSilent, isLoading, isUserSpeaking, isAgentSpeaking]);
 
-  return (
-    <>
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-      `}</style>
-    <div
-      style={{
-        width: "20vw",
-        height: "100vh",
-        display: 'grid',
-        placeItems: 'center',
-      }}
-    >
-      <div
-        style={{
-          width: baseSize,
-          height: baseSize,
-          borderRadius: borderRadius.circle,
-          background: backgroundColor,
-          transform: `scale(${scale})`,
-          transition: animations.transition.medium,
-          boxShadow: boxShadow,
-          animation: isLoading ? `pulse ${animations.pulse.duration} ${animations.pulse.timing} infinite` : 'none',
-        }}
-      />
-    </div>
-    </>
-  );
+    const circleClassName = useMemo(() => {
+        return `${styles.circle} ${isLoading ? styles.loading : ''}`;
+    }, [isLoading]);
+
+    return (
+        <div className={styles.container}>
+            <div
+                className={circleClassName}
+                style={{
+                    background: backgroundColor,
+                    transform: `scale(${scale})`,
+                    boxShadow: boxShadow,
+                }}
+            />
+        </div>
+    );
 };
