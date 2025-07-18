@@ -15,8 +15,10 @@ export const CenterContent = ({micStream, playbackStream, muted}: CenterContentP
             display: "flex",
             justifyContent: "center",
             flexDirection: "row",
-            gap: "5vw",
+            gap: "clamp(2vw, 5vw, 8vw)",
             alignItems: "center",
+            padding: "0 20px",
+            boxSizing: "border-box",
         }}>
             <LatestMessage role="user" />
             <MicrophoneVisualizer
