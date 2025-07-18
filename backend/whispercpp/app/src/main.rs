@@ -210,14 +210,40 @@ fn resample_to_16khz(input: &[f32], input_sample_rate: u32) -> Vec<f32> {
 }
 
 fn transcribe_audio(audio: &[f32]) -> Result<String> {
-    let model_path = CString::new("backend/hardware/library/models/ggml-base.en.bin")?;
+    // Try multiple possible model paths
+    let possible_paths = [
+        "backend/whispercpp/library/models/ggml-base.en.bin",
+        "whispercpp/library/models/ggml-base.en.bin",
+        "library/models/ggml-base.en.bin",
+        "models/ggml-base.en.bin",
+        "ggml-base.en.bin",
+    ];
+    
+    let mut model_path = None;
+    for path in &possible_paths {
+        if std::path::Path::new(path).exists() {
+            model_path = Some(path);
+            break;
+        }
+    }
+    
+    let model_path = model_path.ok_or_else(|| {
+        eprintln!("❌ Whisper model not found. Tried paths: {:?}", possible_paths);
+        anyhow::anyhow!("Whisper model not found")
+    })?;
+    
+    let model_path_cstr = CString::new(*model_path)?;
     
     unsafe {
         let result_ptr = whisper_transcribe(
-            model_path.as_ptr(), 
+            model_path_cstr.as_ptr(), 
             audio.as_ptr(), 
             audio.len()
         );
+        
+        if result_ptr.is_null() {
+            return Err(anyhow::anyhow!("Whisper transcription returned null"));
+        }
         
         let result = CStr::from_ptr(result_ptr).to_string_lossy().into_owned();
         whisper_free_result(result_ptr);
@@ -305,16 +331,20 @@ struct Args {
 }
 
 fn start_stdin_stream(sample_rate: u32) -> Result<()> {
+    eprintln!("🎤 Starting stdin stream with sample rate: {}", sample_rate);
     let mut stdin = io::stdin().lock();
     let mut buffer: Vec<u8> = Vec::new();
     let mut temp = [0u8; 4096];
     let mut recorder = ContinuousRecorder::new(AudioConfig { sample_rate });
+    let mut total_bytes = 0;
 
     loop {
         let n = stdin.read(&mut temp)?;
         if n == 0 {
+            eprintln!("📝 EOF reached, processed {} total bytes", total_bytes);
             break; // EOF
         }
+        total_bytes += n;
         buffer.extend_from_slice(&temp[..n]);
 
         // Process whole i16 samples only
@@ -330,15 +360,27 @@ fn start_stdin_stream(sample_rate: u32) -> Result<()> {
             .collect();
 
         if let Some(speech_audio) = recorder.process_audio_chunk(&samples) {
+            eprintln!("🎵 Speech detected, {} samples", speech_audio.len());
             let resampled = resample_to_16khz(&speech_audio, sample_rate);
 
             if resampled.len() > 8000 {
-                if let Ok(transcription) = transcribe_audio(&resampled) {
-                    let text = transcription.trim();
-                    if !text.is_empty() && text.len() > 2 {
-                        println!("{}", text);
+                eprintln!("🔍 Transcribing {} samples...", resampled.len());
+                match transcribe_audio(&resampled) {
+                    Ok(transcription) => {
+                        let text = transcription.trim();
+                        if !text.is_empty() && text.len() > 2 {
+                            println!("{}", text);
+                            eprintln!("✅ Transcription: '{}'", text);
+                        } else {
+                            eprintln!("⚠️  Empty or too short transcription");
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Transcription error: {}", e);
                     }
                 }
+            } else {
+                eprintln!("⚠️  Audio too short ({} samples), skipping", resampled.len());
             }
         }
 
