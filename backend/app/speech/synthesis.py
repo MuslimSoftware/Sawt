@@ -25,7 +25,7 @@ class TextToSpeechService:
         """Synthesize text to speech and return audio bytes"""
         if edge_tts is None:
             # Fallback to placeholder
-            print(f"🔊 TTS (placeholder): '{text[:50]}{'...' if len(text) > 50 else ''}'")
+            print(f"🔊 TTS (placeholder): '{text}'")
             return b""
         
         try:
@@ -37,7 +37,7 @@ class TextToSpeechService:
                 if chunk["type"] == "audio":
                     audio_data.write(chunk["data"])
             
-            print(f"🔊 TTS: '{text[:50]}{'...' if len(text) > 50 else ''}'")
+            print(f"🔊 TTS: '{text}'")
             return audio_data.getvalue()
             
         except Exception as e:

@@ -72,6 +72,14 @@ async def read_transcriptions(websocket: WebSocket, voice_service, connection_id
                 
                 # Send audio response if available
                 if response_audio:
+                    # Send stop_audio command to prevent multiple audio streams
+                    stop_audio_message = {
+                        "type": "control",
+                        "command": "stop_audio"
+                    }
+                    await websocket.send_text(json.dumps(stop_audio_message))
+                    
+                    # Send the new audio
                     await websocket.send_bytes(response_audio)
             
             # Small delay to prevent busy waiting
