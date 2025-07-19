@@ -12,9 +12,3 @@ litellm>=1.0.0
 edge-tts>=6.1.0
 sounddevice>=0.4.6
 soundfile>=0.12.1
-
-# Development dependencies (optional)
-# pytest>=7.4.0
-# pytest-asyncio>=0.21.0
-# black>=23.0.0
-# flake8>=6.0.0

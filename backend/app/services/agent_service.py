@@ -15,7 +15,7 @@ class AgentService:
             # Generate response
             response, is_directed_at_agent = self.repo.generate_response(connection_id, text)
 
-            print(f"🤖 Agent response: {response} is_directed_at_agent: {is_directed_at_agent}")
+            print(f"🤖 Agent response: {response}, is_directed_at_agent: {is_directed_at_agent}")
             return response, is_directed_at_agent
         except Exception as e:
             print(f"❌ Agent processing error: {e}")

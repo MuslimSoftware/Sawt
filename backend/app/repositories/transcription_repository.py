@@ -78,11 +78,11 @@ class TranscriptionRepository:
     
     def write_audio(self, audio_data: bytes) -> None:
         """Write audio data to the Whisper process"""
-        process = self.get_whisper_process()
         try:
+            process = self.get_whisper_process()
             process.stdin.write(audio_data)
             process.stdin.flush()
-        except Exception as e:
+        except BaseException as e:
             print(f"❌ Error writing audio to Whisper: {e}")
             # If we get a broken pipe, restart the process
             if "Broken pipe" in str(e) or "Errno 32" in str(e):

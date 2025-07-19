@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import traceback
@@ -103,22 +103,22 @@ async def websocket_endpoint(websocket: WebSocket):
     client_id = None
     try:
         await websocket.accept()
-        
+
         # Get client identifier (IP + user agent)
         client_host = websocket.client.host if websocket.client else "unknown"
         client_id = f"{client_host}"
         
         # Check if this client already has an active connection
         if client_id in _active_connections:
-            print(f"⚠️  Duplicate connection attempt from {client_id}, closing")
             await websocket.close(code=1008, reason="Duplicate connection")
             return
         
         _active_connections.add(client_id)
-        print(f"🔗 New WebSocket connection from {client_id}")
         
         await handle_websocket(websocket)
         
+    except WebSocketDisconnect:
+        pass
     except Exception as e:
         print(f"❌ WebSocket error: {e}")
         print("Full traceback:")
@@ -127,12 +127,6 @@ async def websocket_endpoint(websocket: WebSocket):
         # Clean up connection tracking
         if client_id and client_id in _active_connections:
             _active_connections.remove(client_id)
-            print(f"🔌 Connection closed for {client_id}")
-        
-        try:
-            await websocket.close()
-        except:
-            pass
 
 if __name__ == "__main__":
     uvicorn.run(

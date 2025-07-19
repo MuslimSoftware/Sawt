@@ -12,29 +12,18 @@ async def handle_websocket(websocket: WebSocket):
     connection_id = str(uuid.uuid4())
     voice_service = VoiceAssistantService()
     
-    print(f"🔗 WebSocket connection opened: {connection_id}")
-    
     transcription_task = asyncio.create_task(read_transcriptions(websocket, voice_service, connection_id))
     
     try:
         while True:
-            # Receive audio data
             audio_data = await websocket.receive_bytes()
-            
             voice_service.transcription_repo.write_audio(audio_data)
-                
     except Exception as e:
-        # Handle WebSocket disconnect gracefully
-        if "WebSocketDisconnect" in str(type(e)):
-            print(f"🔌 WebSocket disconnected normally: {connection_id}")
-            voice_service.cleanup_connection(connection_id)
-        else:
-            print(f"❌ WebSocket handler error: {e}")
+        if "WebSocketDisconnect" not in str(type(e)):
+            print(f"❌ WebSocket error: {e}")
             traceback.print_exc()
-            voice_service.cleanup_connection(connection_id)
+        voice_service.cleanup_connection(connection_id)
     finally:
-        # Cancel the transcription task
-        print(f"🧹 Cleaning up connection: {connection_id}")
         transcription_task.cancel()
         try:
             await transcription_task
@@ -45,7 +34,6 @@ async def read_transcriptions(websocket: WebSocket, voice_service, connection_id
     """Background task to continuously read transcriptions"""
     try:
         while True:
-            # Read transcription from the repository
             loop = asyncio.get_event_loop()
             transcription = await loop.run_in_executor(None, voice_service.transcription_repo.read_transcription)
             
@@ -82,11 +70,9 @@ async def read_transcriptions(websocket: WebSocket, voice_service, connection_id
                     # Send the new audio
                     await websocket.send_bytes(response_audio)
             
-            # Small delay to prevent busy waiting
             await asyncio.sleep(0.01)
             
     except asyncio.CancelledError:
-        # Task was cancelled, exit gracefully
         pass
     except Exception as e:
         print(f"❌ Transcription reading error: {e}")

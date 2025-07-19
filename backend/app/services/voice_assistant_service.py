@@ -53,9 +53,9 @@ class VoiceAssistantService:
         """Process transcription through AI and TTS pipeline"""
         try:
             # Step 1: Process with AI agent
-            response = self.agent_service.process_user_input(connection_id, transcription)
-            if not response:
-                return None, None
+            response, is_directed_at_agent = self.agent_service.process_user_input(connection_id, transcription)
+            if not is_directed_at_agent:
+                return "[Not directed at agent]", None
             
             # Step 2: Synthesize response
             audio_response = await self.tts_service.synthesize_response(response)
