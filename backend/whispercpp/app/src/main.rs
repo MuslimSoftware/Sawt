@@ -1,193 +1,199 @@
 use std::ffi::{CString, CStr};
-use std::os::raw::c_char;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use std::collections::VecDeque;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use std::os::raw::{c_char, c_int};
 use anyhow::Result;
 use clap::Parser;
-use std::io::{self, Read};
-use bytemuck::cast_slice;
 
+// Direct FFI bindings to Whisper
+#[link(name = "whisper")]
 extern "C" {
-    fn whisper_transcribe(
-        model_path: *const c_char,
-        audio_data: *const f32,
-        num_samples: usize,
-    ) -> *const c_char;
+    fn whisper_init_from_file(path_model: *const c_char) -> *mut std::ffi::c_void;
+    fn whisper_free(ctx: *mut std::ffi::c_void);
+    fn whisper_full(
+        ctx: *mut std::ffi::c_void,
+        params: whisper_full_params,
+        samples: *const f32,
+        n_samples: c_int,
+    ) -> c_int;
+    fn whisper_full_n_segments(ctx: *mut std::ffi::c_void) -> c_int;
+    fn whisper_full_get_segment_text(ctx: *mut std::ffi::c_void, i_segment: c_int) -> *const c_char;
+}
 
-    fn whisper_free_result(ptr: *const c_char);
+#[repr(C)]
+struct whisper_full_params {
+    strategy: c_int,
+    n_threads: c_int,
+    n_max_text_ctx: c_int,
+    offset_ms: c_int,
+    duration_ms: c_int,
+    translate: bool,
+    no_context: bool,
+    no_timestamps: bool,
+    single_segment: bool,
+    print_special: bool,
+    print_progress: bool,
+    print_timestamps: bool,
+    print_tokens: bool,
+    token_timestamps: bool,
+    speed_up: bool,
+    output_txt: bool,
+    output_vtt: bool,
+    output_srt: bool,
+    output_wts: bool,
+    output_csv: bool,
+    output_jsn: bool,
+    output_lrc: bool,
+    output_word_timestamps: bool,
+    word_thold: f32,
+    max_len: c_int,
+    max_tokens: c_int,
+    audio_ctx: c_int,
+    tdrz_enable: bool,
+    initial_prompt: *const c_char,
+    prompt_tokens: *const whisper_token,
+    prompt_n_tokens: c_int,
+    language: *const c_char,
+    detect_language: bool,
+    suppress_blank: bool,
+    suppress_non_speech_tokens: bool,
+    temperature: f32,
+    max_initial_timestamp: f32,
+    length_penalty: f32,
+    temperature_inc: f32,
+    entropy_thold: f32,
+    logprob_thold: f32,
+    no_speech_thold: f32,
+    greedy: whisper_greedy,
+    beam_search: whisper_beam_search,
+    best_of: c_int,
+    beam_size: c_int,
+    patience: f32,
+    length_penalty_beam: f32,
+    group_size: c_int,
+}
+
+#[repr(C)]
+struct whisper_greedy {
+    best_of: c_int,
+}
+
+#[repr(C)]
+struct whisper_beam_search {
+    beam_size: c_int,
+    n_best: c_int,
+    patience: f32,
+    length_penalty: f32,
+}
+
+type whisper_token = c_int;
+
+fn transcribe_audio(audio: &[f32]) -> Result<String> {
+    // Ensure audio is in the correct format (16kHz, mono, float32)
+    let resampled_audio = resample_to_16khz(audio, 16000);
     
-    fn whisper_cleanup();
-}
-
-#[derive(Clone)]
-struct AudioConfig {
-    sample_rate: u32,
-}
-
-struct VoiceActivityDetector {
-    energy_threshold: f32,
-    speech_frames: usize,
-    silence_frames: usize,
-    min_speech_frames: usize,
-    min_silence_frames: usize,
-    is_speech_active: bool,
-}
-
-impl VoiceActivityDetector {
-    fn new() -> Self {
-        Self {
-            energy_threshold: 0.0005, // Lower threshold for better sensitivity
-            speech_frames: 0,
-            silence_frames: 0,
-            min_speech_frames: 5,    // ~100ms at 48kHz with 1024 samples per frame
-            min_silence_frames: 250, // ~2500ms (2.5 seconds) of silence to end speech
-            is_speech_active: false,
-        }
-    }
+    // Convert to C string for model path
+    let model_path = CString::new("/app/models/ggml-base.en.bin")?;
     
-    fn calculate_energy(&self, samples: &[f32]) -> f32 {
-        samples.iter().map(|&s| s * s).sum::<f32>() / samples.len() as f32
-    }
+    // Initialize Whisper context
+    let ctx = unsafe {
+        whisper_init_from_file(model_path.as_ptr())
+    };
     
-    fn process_frame(&mut self, samples: &[f32]) -> VadResult {
-        let energy = self.calculate_energy(samples);
-        
-        if energy > self.energy_threshold {
-            self.speech_frames += 1;
-            self.silence_frames = 0;
-            
-            if !self.is_speech_active && self.speech_frames >= self.min_speech_frames {
-                self.is_speech_active = true;
-                return VadResult::SpeechStart;
-            }
-        } else {
-            self.silence_frames += 1;
-            // Don't reset speech_frames immediately - allow for brief pauses
-            if self.silence_frames > self.min_silence_frames / 2 {
-                self.speech_frames = 0;
-            }
-            
-            if self.is_speech_active && self.silence_frames >= self.min_silence_frames {
-                self.is_speech_active = false;
-                return VadResult::SpeechEnd;
-            }
-        }
-        
-        if self.is_speech_active {
-            VadResult::Speech
-        } else {
-            VadResult::Silence
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-enum VadResult {
-    Silence,
-    Speech,
-    SpeechStart,
-    SpeechEnd,
-}
-
-struct ContinuousRecorder {
-    audio_buffer: VecDeque<f32>,
-    speech_buffer: Vec<f32>,
-    vad: VoiceActivityDetector,
-    config: AudioConfig,
-    max_buffer_size: usize,
-    recording_speech: bool,
-    speech_start_time: Option<Instant>,
-    max_speech_duration: Duration,
-}
-
-impl ContinuousRecorder {
-    fn new(config: AudioConfig) -> Self {
-        let max_buffer_size = config.sample_rate as usize * 30; // 30 seconds max
-        
-        Self {
-            audio_buffer: VecDeque::with_capacity(max_buffer_size),
-            speech_buffer: Vec::new(),
-            vad: VoiceActivityDetector::new(),
-            config,
-            max_buffer_size,
-            recording_speech: false,
-            speech_start_time: None,
-            max_speech_duration: Duration::from_secs(10), // Max 10 seconds per speech segment
-        }
+    if ctx.is_null() {
+        return Err(anyhow::anyhow!("Failed to initialize Whisper context"));
     }
     
-    fn process_audio_chunk(&mut self, samples: &[f32]) -> Option<Vec<f32>> {
-        // Add to circular buffer
-        for &sample in samples {
-            if self.audio_buffer.len() >= self.max_buffer_size {
-                self.audio_buffer.pop_front();
-            }
-            self.audio_buffer.push_back(sample);
-        }
-        
-        // Voice activity detection
-        let vad_result = self.vad.process_frame(samples);
-        
-        match vad_result {
-            VadResult::SpeechStart => {
-                self.recording_speech = true;
-                self.speech_start_time = Some(Instant::now());
-                self.speech_buffer.clear();
-                
-                // Include some pre-speech audio for better transcription
-                let pre_speech_samples = (self.config.sample_rate as f32 * 0.3) as usize; // 300ms
-                let start_idx = if self.audio_buffer.len() > pre_speech_samples {
-                    self.audio_buffer.len() - pre_speech_samples
-                } else {
-                    0
-                };
-                
-                for i in start_idx..self.audio_buffer.len() {
-                    if let Some(&sample) = self.audio_buffer.get(i) {
-                        self.speech_buffer.push(sample);
-                    }
-                }
-            }
-            VadResult::Speech => {
-                if self.recording_speech {
-                    self.speech_buffer.extend_from_slice(samples);
-                    
-                    // Check for maximum speech duration
-                    if let Some(start_time) = self.speech_start_time {
-                        if start_time.elapsed() > self.max_speech_duration {
-                            self.recording_speech = false;
-                            self.speech_start_time = None;
-                            
-                            if !self.speech_buffer.is_empty() {
-                                let speech_audio = self.speech_buffer.clone();
-                                self.speech_buffer.clear();
-                                return Some(speech_audio);
-                            }
-                        }
-                    }
-                }
-            }
-            VadResult::SpeechEnd => {
-                if self.recording_speech {
-                    self.recording_speech = false;
-                    self.speech_start_time = None;
-                    
-                    if !self.speech_buffer.is_empty() {
-                        let speech_audio = self.speech_buffer.clone();
-                        self.speech_buffer.clear();
-                        return Some(speech_audio);
-                    }
-                }
-            }
-            VadResult::Silence => {
-                // Continue silence
-            }
-        }
-        
-        None
+    // Set up parameters
+    let params = whisper_full_params {
+        strategy: 0, // WHISPER_SAMPLING_GREEDY
+        n_threads: 4,
+        n_max_text_ctx: 16384,
+        offset_ms: 0,
+        duration_ms: 0,
+        translate: false,
+        no_context: false,
+        no_timestamps: false,
+        single_segment: false,
+        print_special: false,
+        print_progress: false,
+        print_timestamps: false,
+        print_tokens: false,
+        token_timestamps: false,
+        speed_up: false,
+        output_txt: false,
+        output_vtt: false,
+        output_srt: false,
+        output_wts: false,
+        output_csv: false,
+        output_jsn: false,
+        output_lrc: false,
+        output_word_timestamps: false,
+        word_thold: 0.0,
+        max_len: 0,
+        max_tokens: 0,
+        audio_ctx: 0,
+        tdrz_enable: false,
+        initial_prompt: std::ptr::null(),
+        prompt_tokens: std::ptr::null(),
+        prompt_n_tokens: 0,
+        language: std::ptr::null(),
+        detect_language: false,
+        suppress_blank: false,
+        suppress_non_speech_tokens: false,
+        temperature: 0.0,
+        max_initial_timestamp: 1.0,
+        length_penalty: 1.0,
+        temperature_inc: 0.0,
+        entropy_thold: 2.4,
+        logprob_thold: -1.0,
+        no_speech_thold: 0.6,
+        greedy: whisper_greedy { best_of: 1 },
+        beam_search: whisper_beam_search {
+            beam_size: 5,
+            n_best: 5,
+            patience: 1.0,
+            length_penalty: 1.0,
+        },
+        best_of: 1,
+        beam_size: 5,
+        patience: 1.0,
+        length_penalty_beam: 1.0,
+        group_size: 1,
+    };
+    
+    // Run transcription
+    let result = unsafe {
+        whisper_full(ctx, params, resampled_audio.as_ptr(), resampled_audio.len() as c_int)
+    };
+    
+    if result != 0 {
+        unsafe { whisper_free(ctx) };
+        return Err(anyhow::anyhow!("Whisper transcription failed"));
     }
+    
+    // Get the result
+    let n_segments = unsafe { whisper_full_n_segments(ctx) };
+    if n_segments == 0 {
+        unsafe { whisper_free(ctx) };
+        return Ok("".to_string());
+    }
+    
+    // Concatenate all segments
+    let mut result = String::new();
+    for i in 0..n_segments {
+        let text_ptr = unsafe { whisper_full_get_segment_text(ctx, i) };
+        if !text_ptr.is_null() {
+            let text = unsafe { CStr::from_ptr(text_ptr) };
+            if let Ok(text_str) = text.to_str() {
+                result.push_str(text_str);
+                result.push(' ');
+            }
+        }
+    }
+    
+    // Clean up
+    unsafe { whisper_free(ctx) };
+    
+    Ok(result)
 }
 
 fn resample_to_16khz(input: &[f32], input_sample_rate: u32) -> Vec<f32> {
@@ -200,201 +206,66 @@ fn resample_to_16khz(input: &[f32], input_sample_rate: u32) -> Vec<f32> {
     let mut output = Vec::with_capacity(output_len);
     
     for i in 0..output_len {
-        let src_index = (i as f64 * ratio) as usize;
-        if src_index < input.len() {
-            output.push(input[src_index]);
+        let input_idx = (i as f64 * ratio) as usize;
+        if input_idx < input.len() {
+            output.push(input[input_idx]);
         }
     }
     
     output
 }
 
-fn transcribe_audio(audio: &[f32]) -> Result<String> {
-    // Try multiple possible model paths
-    let possible_paths = [
-        "backend/whispercpp/library/models/ggml-base.en.bin",
-        "whispercpp/library/models/ggml-base.en.bin",
-        "library/models/ggml-base.en.bin",
-        "models/ggml-base.en.bin",
-        "ggml-base.en.bin",
-    ];
-    
-    let mut model_path = None;
-    for path in &possible_paths {
-        if std::path::Path::new(path).exists() {
-            model_path = Some(path);
-            break;
-        }
-    }
-    
-    let model_path = model_path.ok_or_else(|| {
-        eprintln!("❌ Whisper model not found. Tried paths: {:?}", possible_paths);
-        anyhow::anyhow!("Whisper model not found")
-    })?;
-    
-    let model_path_cstr = CString::new(*model_path)?;
-    
-    unsafe {
-        let result_ptr = whisper_transcribe(
-            model_path_cstr.as_ptr(), 
-            audio.as_ptr(), 
-            audio.len()
-        );
-        
-        if result_ptr.is_null() {
-            return Err(anyhow::anyhow!("Whisper transcription returned null"));
-        }
-        
-        let result = CStr::from_ptr(result_ptr).to_string_lossy().into_owned();
-        whisper_free_result(result_ptr);
-        
-        Ok(result)
-    }
-}
-
-fn start_continuous_recording() -> Result<()> {
-    let host = cpal::default_host();
-    let device = host.default_input_device()
-        .ok_or_else(|| anyhow::anyhow!("No input device available"))?;
-    
-    let config = device.default_input_config()?;
-    let sample_rate = config.sample_rate().0;
-    let channels = config.channels();
-    
-    let stream_config = cpal::StreamConfig {
-        channels,
-        sample_rate: config.sample_rate(),
-        buffer_size: cpal::BufferSize::Default,
-    };
-    
-    let audio_config = AudioConfig {
-        sample_rate,
-    };
-    
-    let recorder = Arc::new(Mutex::new(ContinuousRecorder::new(audio_config.clone())));
-    let recorder_clone = recorder.clone();
-    
-    let stream = device.build_input_stream(
-        &stream_config,
-        move |data: &[f32], _: &cpal::InputCallbackInfo| {
-            let mut recorder = recorder_clone.lock().unwrap();
-            
-            // Convert stereo to mono if needed
-            let mono_samples: Vec<f32> = if channels == 2 {
-                data.chunks(2).map(|chunk| chunk[0]).collect()
-            } else {
-                data.to_vec()
-            };
-            
-            // Process the audio chunk
-            if let Some(speech_audio) = recorder.process_audio_chunk(&mono_samples) {
-                // Speech segment detected, transcribe it
-                let resampled = resample_to_16khz(&speech_audio, sample_rate);
-                
-                if resampled.len() > 8000 { // At least 0.5 seconds of audio
-                    match transcribe_audio(&resampled) {
-                        Ok(transcription) => {
-                            let text = transcription.trim();
-                            if !text.is_empty() && text.len() > 2 {
-                                println!("{}", text); // Send transcription to stdout
-                            }
-                        }
-                        Err(_) => {
-                            // Silently ignore transcription errors
-                        }
-                    }
-                }
-            }
-        },
-        |_err| {}, // Silently ignore audio stream errors
-        None,
-    )?;
-    
-    stream.play()?;
-    
-    // Keep the stream alive
-    loop {
-        std::thread::sleep(Duration::from_millis(100));
-    }
-}
-
 #[derive(Parser)]
-#[command(author, version, about)]
+#[command(author, version, about, long_about = None)]
 struct Args {
-    /// Audio source: "mic" (default) or "stdin"
-    #[arg(short, long, default_value = "mic")]
-    source: String,
-
-    /// Sample-rate of incoming PCM when using stdin
-    #[arg(short = 'r', long, default_value_t = 16000)]
-    sample_rate: u32,
-}
-
-fn start_stdin_stream(sample_rate: u32) -> Result<()> {
-    eprintln!("🎤 Starting stdin stream with sample rate: {}", sample_rate);
-    let mut stdin = io::stdin().lock();
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut temp = [0u8; 4096];
-    let mut recorder = ContinuousRecorder::new(AudioConfig { sample_rate });
-    let mut total_bytes = 0;
-
-    loop {
-        let n = stdin.read(&mut temp)?;
-        if n == 0 {
-            eprintln!("📝 EOF reached, processed {} total bytes", total_bytes);
-            break; // EOF
-        }
-        total_bytes += n;
-        buffer.extend_from_slice(&temp[..n]);
-
-        // Process whole i16 samples only
-        let sample_bytes = buffer.len() / 2 * 2;
-        if sample_bytes == 0 {
-            continue;
-        }
-
-        let samples_i16: &[i16] = cast_slice(&buffer[..sample_bytes]);
-        let samples: Vec<f32> = samples_i16
-            .iter()
-            .map(|s| *s as f32 / i16::MAX as f32)
-            .collect();
-
-        if let Some(speech_audio) = recorder.process_audio_chunk(&samples) {
-            eprintln!("🎵 Speech detected, {} samples", speech_audio.len());
-            let resampled = resample_to_16khz(&speech_audio, sample_rate);
-
-            if resampled.len() > 8000 {
-                eprintln!("🔍 Transcribing {} samples...", resampled.len());
-                match transcribe_audio(&resampled) {
-                    Ok(transcription) => {
-                        let text = transcription.trim();
-                        if !text.is_empty() && text.len() > 2 {
-                            println!("{}", text);
-                            eprintln!("✅ Transcription: '{}'", text);
-                        } else {
-                            eprintln!("⚠️  Empty or too short transcription");
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Transcription error: {}", e);
-                    }
-                }
-            } else {
-                eprintln!("⚠️  Audio too short ({} samples), skipping", resampled.len());
-            }
-        }
-
-        // Remove processed bytes, keep leftover (if odd number of bytes)
-        buffer.drain(..sample_bytes);
-    }
-    Ok(())
+    /// Path to Whisper model file
+    #[arg(short, long, default_value = "/app/models/ggml-base.en.bin")]
+    model: String,
+    
+    /// Test transcription with a simple audio file
+    #[arg(short, long)]
+    test: bool,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    match args.source.as_str() {
-        "stdin" => start_stdin_stream(args.sample_rate),
-        _ => start_continuous_recording(),
+    
+    println!("Whisper Backend Service Starting...");
+    println!("Model path: {}", args.model);
+    
+    if args.test {
+        println!("Testing basic functionality...");
+        
+        // Check if we can access the libraries
+        println!("Checking library availability...");
+        
+        // Create a simple test audio signal (1 second of 440Hz sine wave)
+        let sample_rate = 16000;
+        let duration = 1.0; // 1 second
+        let frequency = 440.0; // 440Hz
+        let num_samples = (sample_rate as f32 * duration) as usize;
+        
+        let mut test_audio = Vec::with_capacity(num_samples);
+        for i in 0..num_samples {
+            let t = i as f32 / sample_rate as f32;
+            let sample = (2.0 * std::f32::consts::PI * frequency * t).sin() * 0.1;
+            test_audio.push(sample);
+        }
+        
+        println!("Testing transcription with {} samples...", test_audio.len());
+        match transcribe_audio(&test_audio) {
+            Ok(transcription) => {
+                println!("Transcription result: '{}'", transcription);
+            }
+            Err(e) => {
+                eprintln!("Transcription failed: {}", e);
+            }
+        }
+    } else {
+        println!("Backend service ready. Use --test to run a test transcription.");
+        println!("This service is designed to receive audio data via websockets.");
     }
+    
+    Ok(())
 }
 

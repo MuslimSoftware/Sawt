@@ -1316,9 +1316,9 @@ static ggml_backend_t whisper_backend_init_gpu(const whisper_context_params & pa
 
     if (dev == nullptr) {
         WHISPER_LOG_INFO("%s: no GPU found\n", __func__);
-        return nullptr;
-    }
-
+            return nullptr;
+        }
+        
     WHISPER_LOG_INFO("%s: using %s backend\n", __func__, ggml_backend_dev_name(dev));
     ggml_backend_t result = ggml_backend_dev_init(dev, nullptr);
     if (!result) {
@@ -1462,9 +1462,9 @@ static ggml_backend_buffer_type_t select_weight_buft(const whisper_hparams & hpa
         }
     }
 
-    return nullptr;
-}
-
+        return nullptr;
+    }
+    
 // load the model from a ggml file
 //
 // file format:
@@ -3372,7 +3372,7 @@ struct whisper_state * whisper_init_state(whisper_context * ctx) {
         whisper_free_state(state);
         return nullptr;
     }
-
+    
     // at this point, we don't know yet how many decoders will be used
     // later during decoding, if more decoders are used, we will recreate the KV cache respectively
     state->kv_self_n_dec = 1;
@@ -3489,7 +3489,7 @@ struct whisper_state * whisper_init_state(whisper_context * ctx) {
             whisper_free_state(state);
             return nullptr;
         }
-
+        
         WHISPER_LOG_INFO("%s: compute buffer (encode) = %7.2f MB\n", __func__, whisper_sched_size(state->sched_encode) / 1e6);
     }
 
@@ -3503,9 +3503,9 @@ struct whisper_state * whisper_init_state(whisper_context * ctx) {
         if (!ok) {
             WHISPER_LOG_ERROR("%s: failed to init cross allocator\n", __func__);
             whisper_free_state(state);
-            return nullptr;
-        }
-
+        return nullptr;
+    }
+    
         WHISPER_LOG_INFO("%s: compute buffer (cross)  = %7.2f MB\n", __func__, whisper_sched_size(state->sched_cross) / 1e6);
     }
 
@@ -3527,9 +3527,9 @@ struct whisper_state * whisper_init_state(whisper_context * ctx) {
         if (!ok) {
             WHISPER_LOG_ERROR("%s: failed to init decoder allocator\n", __func__);
             whisper_free_state(state);
-            return nullptr;
-        }
-
+        return nullptr;
+    }
+    
         WHISPER_LOG_INFO("%s: compute buffer (decode) = %7.2f MB\n", __func__, whisper_sched_size(state->sched_decode) / 1e6);
     }
 
