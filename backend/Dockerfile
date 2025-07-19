@@ -133,5 +133,5 @@ COPY run.py ./
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["./automation"]
+# Run the Python FastAPI server
+CMD ["python", "server.py"]

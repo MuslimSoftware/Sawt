@@ -129,8 +129,9 @@ async def websocket_endpoint(websocket: WebSocket):
             _active_connections.remove(client_id)
 
 if __name__ == "__main__":
+    print("Starting server")
     uvicorn.run(
-        "app.server:app",
+        "server:app",
         host="0.0.0.0",
         port=8000,
         reload=True,

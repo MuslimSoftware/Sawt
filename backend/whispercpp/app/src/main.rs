@@ -1,5 +1,6 @@
 use std::ffi::{CString, CStr};
 use std::os::raw::{c_char, c_int};
+use std::io::{self, Read};
 use anyhow::Result;
 use clap::Parser;
 
@@ -102,17 +103,17 @@ fn transcribe_audio(audio: &[f32]) -> Result<String> {
         return Err(anyhow::anyhow!("Failed to initialize Whisper context"));
     }
     
-    // Set up parameters
+    // Set up parameters - explicitly disable GPU and VAD to avoid QEMU issues
     let params = whisper_full_params {
         strategy: 0, // WHISPER_SAMPLING_GREEDY
-        n_threads: 4,
+        n_threads: 1, // Use single thread to avoid emulation issues
         n_max_text_ctx: 16384,
         offset_ms: 0,
         duration_ms: 0,
         translate: false,
         no_context: false,
         no_timestamps: false,
-        single_segment: false,
+        single_segment: true, // Force single segment to avoid VAD issues
         print_special: false,
         print_progress: false,
         print_timestamps: false,
@@ -145,7 +146,7 @@ fn transcribe_audio(audio: &[f32]) -> Result<String> {
         temperature_inc: 0.0,
         entropy_thold: 2.4,
         logprob_thold: -1.0,
-        no_speech_thold: 0.6,
+        no_speech_thold: 999.0, // Very high value to disable VAD
         greedy: whisper_greedy { best_of: 1 },
         beam_search: whisper_beam_search {
             beam_size: 5,
@@ -215,6 +216,19 @@ fn resample_to_16khz(input: &[f32], input_sample_rate: u32) -> Vec<f32> {
     output
 }
 
+fn bytes_to_f32_audio(bytes: &[u8]) -> Vec<f32> {
+    // Convert bytes to f32 audio samples
+    // Assuming 16-bit PCM audio
+    let mut audio = Vec::with_capacity(bytes.len() / 2);
+    for i in (0..bytes.len()).step_by(2) {
+        if i + 1 < bytes.len() {
+            let sample = ((bytes[i + 1] as i16) << 8) | (bytes[i] as i16);
+            audio.push(sample as f32 / 32768.0);
+        }
+    }
+    audio
+}
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -225,19 +239,41 @@ struct Args {
     /// Test transcription with a simple audio file
     #[arg(short, long)]
     test: bool,
+    
+    /// Transcribe audio from stdin
+    #[arg(short, long)]
+    stdin: bool,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
     
-    println!("Whisper Backend Service Starting...");
-    println!("Model path: {}", args.model);
-    
-    if args.test {
-        println!("Testing basic functionality...");
+    if args.stdin {
+        // Read audio data from stdin
+        let mut audio_data = Vec::new();
+        io::stdin().read_to_end(&mut audio_data)?;
         
-        // Check if we can access the libraries
-        println!("Checking library availability...");
+        if audio_data.is_empty() {
+            return Err(anyhow::anyhow!("No audio data received"));
+        }
+        
+        // Convert bytes to f32 audio
+        let audio_samples = bytes_to_f32_audio(&audio_data);
+        
+        // Transcribe the audio
+        match transcribe_audio(&audio_samples) {
+            Ok(transcription) => {
+                if !transcription.trim().is_empty() {
+                    println!("{}", transcription.trim());
+                }
+            }
+            Err(e) => {
+                eprintln!("Transcription failed: {}", e);
+                std::process::exit(1);
+            }
+        }
+    } else if args.test {
+        println!("Testing basic functionality...");
         
         // Create a simple test audio signal (1 second of 440Hz sine wave)
         let sample_rate = 16000;
@@ -256,6 +292,9 @@ fn main() -> Result<()> {
         match transcribe_audio(&test_audio) {
             Ok(transcription) => {
                 println!("Transcription result: '{}'", transcription);
+                if transcription.trim().is_empty() {
+                    println!("Note: Empty transcription is expected for a pure sine wave (no speech content)");
+                }
             }
             Err(e) => {
                 eprintln!("Transcription failed: {}", e);
@@ -263,7 +302,7 @@ fn main() -> Result<()> {
         }
     } else {
         println!("Backend service ready. Use --test to run a test transcription.");
-        println!("This service is designed to receive audio data via websockets.");
+        println!("Use --stdin to transcribe audio from stdin.");
     }
     
     Ok(())
