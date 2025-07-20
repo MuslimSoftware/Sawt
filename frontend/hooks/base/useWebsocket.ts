@@ -35,7 +35,10 @@ export const useWebsocket = (
   const wsRef = useRef<WebSocket | null>(null);
 
   const sendData = useCallback((data: string | ArrayBuffer) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(data);
+    console.log("[useWebsocket] Sending data of length", data instanceof ArrayBuffer ? (data as ArrayBuffer).byteLength : 0);
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(data);
+    }
   }, []);
 
   useEffect(() => {

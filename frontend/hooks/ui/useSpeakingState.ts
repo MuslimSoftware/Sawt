@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useDebouncedBoolean } from '@/hooks/base/useDebouncedBoolean';
+import { useDebouncedBoolean } from '@/hooks/common/useDebouncedBoolean';
 import { useSpeakingHistory } from '@/hooks/chat/useSpeakingHistory';
 
 interface UseSpeakingStateProps {
