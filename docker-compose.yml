@@ -3,7 +3,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      platforms: ["linux/amd64"]
     env_file:
       - ./backend/.env
     environment:
@@ -17,7 +16,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      platforms: ["linux/amd64"]
     environment:
       - NEXT_PUBLIC_BACKEND_WS=ws://localhost:8000/ws
     ports:
