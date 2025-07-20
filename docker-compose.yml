@@ -7,8 +7,6 @@ services:
       - ./backend/.env
     environment:
       - WHISPER_MODEL=ggml-base.en.bin
-    ports:
-      - "0.0.0.0:8000:8000"
     networks:
       - app-net
 
@@ -17,9 +15,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      - NEXT_PUBLIC_BACKEND_WS=ws://localhost:8000/ws
-    ports:
-      - "0.0.0.0:3000:3000"
+      - NEXT_PUBLIC_BACKEND_WS=wss://sawt-api.younesbenketira.com/ws
     depends_on:
       - backend
     networks:
