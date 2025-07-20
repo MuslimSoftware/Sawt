@@ -15,27 +15,30 @@ class ChatManager:
         await conn_manager.connect(websocket)
         self.websocket = websocket
 
-    async def append_audio(self, chunk: bytes):
-        async with self.lock:
-            self.buffer.append(chunk)
-
     async def disconnect(self):
         """Disconnects the current client."""
         if self.websocket:
             conn_manager.disconnect(self.websocket)
             self.websocket = None
 
+    async def append_audio(self, chunk: bytes):
+        async with self.lock:
+            self.buffer.append(chunk)
+
     async def handle_stop(self):
         async with self.lock:
             pcm = b''.join(self.buffer)
             self.buffer.clear()
+
+        print("pcm length:", len(pcm))
         text = await TranscriptionService.transcribe_audio(pcm)
+        print("transcribed text:", text)
         await self.send_text(text)
 
     async def send_text(self, text: str):
         """Sends a text JSON event via ConnectionManager."""
         if self.websocket:
-            await conn_manager.send_json({"event": "text", "payload": text}, self.websocket)
+            await conn_manager.send_json({"type": "text", "payload": text}, self.websocket)
 
     async def send_audio(self, data: bytes):
         """Sends binary audio via ConnectionManager."""

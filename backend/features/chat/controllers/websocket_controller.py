@@ -1,12 +1,14 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import json
 from features.chat.managers.chat_manager import manager as chat_manager
+from features.common.types.exceptions import BaseSawtException
 
 router = APIRouter()
 
 @router.websocket("/ws/chat")
 async def websocket_endpoint(ws: WebSocket):
     await chat_manager.connect(ws)
+
     try:
         while True:
             msg = await ws.receive()
@@ -19,5 +21,11 @@ async def websocket_endpoint(ws: WebSocket):
                         await chat_manager.handle_stop()
                 except json.JSONDecodeError:
                     pass
-    except WebSocketDisconnect:
+    except Exception as exc:
+        raise BaseSawtException(
+            code="WEBSOCKET_ERROR",
+            message=str(exc),
+            status_code=500,
+        )
+    finally:
         await chat_manager.disconnect()

@@ -6,7 +6,7 @@ import { useWebsocket } from "@/hooks/base/useWebsocket";
 import { useChat } from "@/contexts/ChatContext";
 
 // const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS || "wss://sawt-api.younesbenketira.com/ws";
-const WS_URL = "ws://localhost:8000/ws";
+const WS_URL = "ws://localhost:8000/ws/chat";
 
 export const useChatWebsocket = () => {
   const { play, stopAll, playbackStream } = useAudioPlayback();
@@ -26,7 +26,7 @@ export const useChatWebsocket = () => {
       
       switch (message.type) {
         case "control":
-          if (message.command === "stop_audio") stopAll();
+          if (message.event === "stop_audio") stopAll();
           break;
         case "text":
           setMessages((prev) => [...prev, { role: message.role, content: message.text }]);
