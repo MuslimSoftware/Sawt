@@ -15,7 +15,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS}
+      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS:-ws://localhost:8000/ws}
     depends_on:
       - backend
     networks:

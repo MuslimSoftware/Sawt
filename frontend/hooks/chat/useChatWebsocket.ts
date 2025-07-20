@@ -5,7 +5,7 @@ import { useAudioPlayback } from "@/hooks/core/useAudioPlayback";
 import { useWebsocket } from "@/hooks/core/useWebsocket";
 import { useChat } from "@/contexts/ChatContext";
 
-const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS || "ws://localhost:8000/ws";
+const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS || "wss://sawt-api.younesbenketira.com/ws";
 
 export const useChatWebsocket = () => {
   const { play, stopAll, playbackStream } = useAudioPlayback();
