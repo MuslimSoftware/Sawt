@@ -17,6 +17,13 @@ class TranscriptionRepository:
     _processing_thread = None
     _stop_event = threading.Event()
     
+    # Audio buffering
+    _audio_buffer = bytearray()
+    _min_audio_bytes = 32000  # ~2 seconds of 16kHz 16-bit audio
+    _max_audio_bytes = 160000  # ~10 seconds of audio
+    _last_process_time = 0
+    _silence_threshold = 2.0  # Process after 2 seconds of silence
+    
     def __new__(cls, config: TranscriptionConfig):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -36,18 +43,48 @@ class TranscriptionRepository:
         """Background thread that processes audio and generates transcriptions"""
         while not self._stop_event.is_set():
             try:
-                print("Processing audio chunk")
                 # Get audio data from queue
-                audio_data = self._audio_queue.get(timeout=1.0)
+                audio_data = self._audio_queue.get(timeout=0.1)
                 if audio_data is None:  # Stop signal
                     break
                 
-                # Process audio data using the Rust binary
-                transcription = self._transcribe_audio_chunk(audio_data)
-                if transcription:
-                    self._transcription_queue.put(transcription)
+                # Add to buffer
+                self._audio_buffer.extend(audio_data)
+                current_time = time.time()
+                
+                # Check if we should process the buffer
+                should_process = (
+                    len(self._audio_buffer) >= self._min_audio_bytes or
+                    (len(self._audio_buffer) > 0 and 
+                     current_time - self._last_process_time > self._silence_threshold)
+                )
+                
+                if should_process and len(self._audio_buffer) > 0:
+                    print(f"Processing audio buffer: {len(self._audio_buffer)} bytes")
+                    
+                    # Process the buffered audio
+                    transcription = self._transcribe_audio_chunk(bytes(self._audio_buffer))
+                    if transcription:
+                        self._transcription_queue.put(transcription)
+                    
+                    # Clear buffer and update time
+                    self._audio_buffer.clear()
+                    self._last_process_time = current_time
                     
             except queue.Empty:
+                # Check if we should process remaining buffer after silence
+                current_time = time.time()
+                if (len(self._audio_buffer) > 0 and 
+                    current_time - self._last_process_time > self._silence_threshold):
+                    
+                    print(f"Processing remaining audio buffer: {len(self._audio_buffer)} bytes")
+                    transcription = self._transcribe_audio_chunk(bytes(self._audio_buffer))
+                    if transcription:
+                        self._transcription_queue.put(transcription)
+                    
+                    self._audio_buffer.clear()
+                    self._last_process_time = current_time
+                    
                 continue
             except Exception as e:
                 print(f"❌ Error in audio processing loop: {e}")
@@ -55,18 +92,14 @@ class TranscriptionRepository:
     def _transcribe_audio_chunk(self, audio_data: bytes) -> Optional[str]:
         """Transcribe a chunk of audio data using the Rust binary"""
         try:
-            print(f"Transcribing audio chunk: {len(audio_data)} bytes")
+            if len(audio_data) < 1000:  # Skip very small chunks
+                return None
                 
-            # Create a temporary audio file
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
-                temp_file.write(audio_data)
-                temp_file_path = temp_file.name
+            print(f"Transcribing audio chunk: {len(audio_data)} bytes")
             
-            # Run the Rust binary with the audio file
+            # Run the Rust binary with the audio data
             cmd = [
                 "/app/automation",
-                "--model", "/app/models/ggml-base.en.bin",
                 "--stdin"
             ]
             
@@ -75,14 +108,20 @@ class TranscriptionRepository:
                 cmd,
                 input=audio_data,
                 capture_output=True,
-                text=False,  # Changed from text=True to handle binary data
+                text=False,  # Handle binary data
                 timeout=30
             )
             
             if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.decode('utf-8').strip()  # Decode bytes to string
+                transcription = result.stdout.decode('utf-8').strip()
+                if transcription and len(transcription.strip()) > 2:
+                    return transcription
+                else:
+                    print("Transcription too short or empty, skipping")
+                    return None
             else:
-                print(f"❌ Transcription failed: {result.stderr.decode('utf-8')}")
+                error_msg = result.stderr.decode('utf-8') if result.stderr else "Unknown error"
+                print(f"❌ Transcription failed: {error_msg}")
                 return None
             
         except subprocess.TimeoutExpired:
@@ -91,12 +130,6 @@ class TranscriptionRepository:
         except Exception as e:
             print(f"❌ Error transcribing audio chunk: {e}")
             return None
-        finally:
-            # Clean up temporary file
-            try:
-                os.unlink(temp_file_path)
-            except:
-                pass
     
     def write_audio(self, audio_data: bytes) -> None:
         """Write audio data to the processing queue"""
