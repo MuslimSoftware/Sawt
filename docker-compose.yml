@@ -13,7 +13,7 @@ services:
       # override or add anything the backend expects at runtime
       - WHISPER_MODEL=ggml-base.en.bin
     ports:
-      - "8000:8000"                    # host:container
+      - "0.0.0.0:8000:8000"           # host:container - bind to all interfaces
     networks:
       - app-net
 
@@ -27,7 +27,7 @@ services:
       # the FE needs to know where the WS lives in production
       - NEXT_PUBLIC_BACKEND_WS=ws://localhost:8000/ws
     ports:
-      - "3000:3000"                    # Next.js default
+      - "0.0.0.0:3000:3000"           # host:container - bind to all interfaces
     depends_on:
       - backend
     networks:
