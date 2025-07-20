@@ -126,7 +126,6 @@ COPY --from=builder /opt/whispercpp/app/target/release/automation ./automation
 # Copy application files
 COPY app/ ./app/
 COPY configs/ ./configs/
-COPY models/ ./models/
 COPY server.py ./
 COPY run.py ./
 
