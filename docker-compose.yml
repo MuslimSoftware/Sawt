@@ -1,31 +1,27 @@
 services:
   backend:
-    # builds ./backend/Dockerfile (the one you just fixed)
     build:
       context: ./backend
-      dockerfile: Dockerfile           # change if you rename it
-      platforms: ["linux/amd64"]       # keep matching your VPS arch
+      dockerfile: Dockerfile
+      platforms: ["linux/amd64"]
     env_file:
-      - ./backend/.env                 # pick up your FastAPI secrets
+      - ./backend/.env
     environment:
-      # override or add anything the backend expects at runtime
       - WHISPER_MODEL=ggml-base.en.bin
     ports:
-      - "0.0.0.0:8000:8000"           # host:container - bind to all interfaces
+      - "0.0.0.0:8000:8000"
     networks:
       - app-net
 
   frontend:
-    # builds ./frontend/Dockerfile (provided below)
     build:
       context: ./frontend
       dockerfile: Dockerfile
       platforms: ["linux/amd64"]
     environment:
-      # the FE needs to know where the WS lives in production
       - NEXT_PUBLIC_BACKEND_WS=ws://localhost:8000/ws
     ports:
-      - "0.0.0.0:3000:3000"           # host:container - bind to all interfaces
+      - "0.0.0.0:3000:3000"
     depends_on:
       - backend
     networks:
