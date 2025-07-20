@@ -1,23 +1,12 @@
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file:
-      - ./backend/.env
-    environment:
-      - WHISPER_MODEL=ggml-base.en.bin
-    networks:
-      - app-net
-
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
       - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS:-ws://localhost:8000/ws}
-    depends_on:
-      - backend
+    ports:
+      - "3000:3000"
     networks:
       - app-net
 
