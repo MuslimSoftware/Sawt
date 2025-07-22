@@ -30,15 +30,13 @@ class ChatManager:
             pcm = b''.join(self.buffer)
             self.buffer.clear()
 
-        print("pcm length:", len(pcm))
         text = await TranscriptionService.transcribe_audio(pcm)
-        print("transcribed text:", text)
-        await self.send_text(text)
+        await self.send_text("user", text)
 
-    async def send_text(self, text: str):
+    async def send_text(self, role: str, text: str):
         """Sends a text JSON event via ConnectionManager."""
         if self.websocket:
-            await conn_manager.send_json({"type": "text", "payload": text}, self.websocket)
+            await conn_manager.send_json({"type": "text", "role": role, "text": text}, self.websocket)
 
     async def send_audio(self, data: bytes):
         """Sends binary audio via ConnectionManager."""
