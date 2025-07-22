@@ -8,6 +8,7 @@ ARG NEXT_PUBLIC_NODE_ENV
 # Set environment variables for the build
 ENV NEXT_PUBLIC_BACKEND_WS=$NEXT_PUBLIC_BACKEND_WS
 ENV NEXT_PUBLIC_NODE_ENV=$NEXT_PUBLIC_NODE_ENV
+ENV NEXT_TELEMETRY_DISABLED 1
 
 WORKDIR /app
 
@@ -15,28 +16,27 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 
-# Copy source and build
+# Copy all sources and build
 COPY . .
-# Disable Next.js telemetry
-# https://nextjs.org/telemetry
-ENV NEXT_TELEMETRY_DISABLED 1
+
 RUN npm run build
 
-# Stage 2: Create the production image from the standalone output
+# Stage 2: Production image
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Disable Next.js telemetry
-# https://nextjs.org/telemetry
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy the standalone output
+# Copy necessary files from builder
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/package.json ./package.json
 
-# Run the Next.js server
+# Optional: re-use envs at runtime if needed
+ENV PORT=3000
 EXPOSE 3000
+
 CMD ["node", "server.js"]
