@@ -3,9 +3,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
-      args:
-        NEXT_PUBLIC_BACKEND_WS: ${NEXT_PUBLIC_BACKEND_WS}
-        NEXT_PUBLIC_NODE_ENV: ${NEXT_PUBLIC_NODE_ENV}
     environment:
       - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS}
       - NEXT_PUBLIC_NODE_ENV=${NEXT_PUBLIC_NODE_ENV}

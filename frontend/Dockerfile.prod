@@ -1,16 +1,7 @@
-# ---------- Stage 1 : build the Next.js app ----------
+# Stage 1: Build the Next.js app
 FROM node:20-alpine AS builder
 
-RUN apk add --no-cache git
 WORKDIR /app
-
-# Accept and export build-time environment variables
-ARG NEXT_PUBLIC_BACKEND_WS
-ARG NEXT_PUBLIC_NODE_ENV
-ENV NEXT_PUBLIC_BACKEND_WS=$NEXT_PUBLIC_BACKEND_WS
-ENV NEXT_PUBLIC_NODE_ENV=$NEXT_PUBLIC_NODE_ENV
-
-RUN echo "📦 WS ENV: $NEXT_PUBLIC_BACKEND_WS"
 
 # Install dependencies
 COPY package*.json ./
@@ -18,20 +9,26 @@ RUN npm ci --legacy-peer-deps
 
 # Copy source and build
 COPY . .
+# Disable Next.js telemetry
+# https://nextjs.org/telemetry
+ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
-# ---------- Stage 2 : slim runtime image ----------
+# Stage 2: Create the production image from the standalone output
 FROM node:20-alpine AS runner
 
-ENV NODE_ENV=production
 WORKDIR /app
 
-# Copy production artifacts
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+# Disable Next.js telemetry
+# https://nextjs.org/telemetry
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
 
+# Copy the standalone output
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Run the Next.js server
 EXPOSE 3000
-CMD ["npm", "start"]
-    
+CMD ["node", "server.js"]
