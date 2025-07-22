@@ -37,8 +37,8 @@ class ChatService:
             try:
                 audio_bytes = await self.speech_service.text_to_speech(agent_response)
                 await self.send_audio(audio_bytes)
-            except NoAudioReceived:
-                print("Skipping TTS for empty or invalid text.")
+            except NoAudioReceived as e:
+                print("Skipping TTS for empty or invalid text.", e)
                 pass
         else:
             await self.send_text("ai", "[Ignored: Not directed at agent]")
