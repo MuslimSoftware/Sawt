@@ -6,8 +6,9 @@ services:
       args:
         NEXT_PUBLIC_BACKEND_WS: ${NEXT_PUBLIC_BACKEND_WS}
         NEXT_PUBLIC_NODE_ENV: ${NEXT_PUBLIC_NODE_ENV}
-    env_file:
-      - .env.prod
+    environment:
+      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS}
+      - NEXT_PUBLIC_NODE_ENV=${NEXT_PUBLIC_NODE_ENV}
     networks:
       - app-net
     depends_on:
@@ -17,8 +18,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    env_file:
-      - .env.prod
     networks:
       - app-net
 

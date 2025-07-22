@@ -8,6 +8,8 @@ import { useChat } from "@/contexts/ChatContext";
 const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS;
 
 export const useChatWebsocket = () => {
+  console.log("WS URL:", process.env.NEXT_PUBLIC_BACKEND_WS);
+
   const { play, stopAll, playbackStream } = useAudioPlayback();
   const { setMessages } = useChat();
 
