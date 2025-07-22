@@ -1,6 +1,14 @@
 # Stage 1: Build the Next.js app
 FROM node:20-alpine AS builder
 
+# Accept build arguments
+ARG NEXT_PUBLIC_BACKEND_WS
+ARG NEXT_PUBLIC_NODE_ENV
+
+# Set environment variables for the build
+ENV NEXT_PUBLIC_BACKEND_WS=$NEXT_PUBLIC_BACKEND_WS
+ENV NEXT_PUBLIC_NODE_ENV=$NEXT_PUBLIC_NODE_ENV
+
 WORKDIR /app
 
 # Install dependencies
