@@ -3,8 +3,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    environment:
-      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS:-ws://localhost:8000/ws/chat}
+    env_file:
+      - .env.dev
     ports:
       - "3000:3000"
     networks:
@@ -19,7 +19,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     env_file:
-      - .env
+      - .env.dev
     ports:
       - "8000:8000"
     networks:

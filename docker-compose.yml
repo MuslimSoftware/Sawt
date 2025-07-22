@@ -4,7 +4,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.prod
     env_file:
-      - .env
+      - .env.prod
     networks:
       - app-net
     depends_on:
@@ -15,7 +15,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.prod
     env_file:
-      - .env
+      - .env.prod
     networks:
       - app-net
 
