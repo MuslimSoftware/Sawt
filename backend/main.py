@@ -2,8 +2,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from features.chat.controllers.websocket_controller import router as websocket_router
 from infrastructure.middlewares.exception_handler import global_exception_handler
+import dspy
+import os
 
-app = FastAPI()
+async def lifespan(app: FastAPI):
+    print("Starting up...")
+    dspy.configure(
+        lm=dspy.LM(
+            model=os.getenv("AI_MODEL"),
+            api_key=os.getenv("AI_API_KEY")
+        )
+    )
+    yield
+    print("Shutting down...")
+
+app = FastAPI(lifespan=lifespan)
 
 # Middlewares
 app.add_middleware(
