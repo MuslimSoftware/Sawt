@@ -1,0 +1,32 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS:-ws://localhost:8000/ws/chat}
+    ports:
+      - "3000:3000"
+    networks:
+      - app-net
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - app-net
+    volumes:
+      - ./backend:/app
+
+networks:
+  app-net:
+    driver: bridge

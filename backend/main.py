@@ -5,14 +5,15 @@ from infrastructure.middlewares.exception_handler import global_exception_handle
 import dspy
 import os
 
+dspy.configure(
+    lm=dspy.LM(
+        model=os.getenv("AGENT_MODEL"),
+        api_key=os.getenv("AGENT_API_KEY")
+    )
+)
+
 async def lifespan(app: FastAPI):
     print("Starting up...")
-    dspy.configure(
-        lm=dspy.LM(
-            model=os.getenv("AI_MODEL"),
-            api_key=os.getenv("AI_API_KEY")
-        )
-    )
     yield
     print("Shutting down...")
 

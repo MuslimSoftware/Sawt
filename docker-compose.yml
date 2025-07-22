@@ -3,11 +3,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
-    profiles: ["prod"]
-    environment:
-      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS:-ws://localhost:8000/ws/chat}
-    ports:
-      - "3000:3000"
+    env_file:
+      - .env
     networks:
       - app-net
     depends_on:
@@ -17,43 +14,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    profiles: ["prod"]
     env_file:
       - .env
-    ports:
-      - "8000:8000"
     networks:
       - app-net
-
-  frontend-dev:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    profiles: ["dev"]
-    environment:
-      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS:-ws://localhost:8000/ws/chat}
-    ports:
-      - "3000:3000"
-    networks:
-      - app-net
-    volumes:
-      - ./frontend:/app
-    depends_on:
-      - backend-dev
-
-  backend-dev:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    profiles: ["dev"]
-    env_file:
-      - .env
-    ports:
-      - "8000:8000"
-    networks:
-      - app-net
-    volumes:
-      - ./backend:/app
 
 networks:
   app-net:
