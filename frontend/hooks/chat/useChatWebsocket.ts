@@ -5,10 +5,9 @@ import { useAudioPlayback } from "@/hooks/base/useAudioPlayback";
 import { useWebsocket } from "@/hooks/base/useWebsocket";
 import { useChat } from "@/contexts/ChatContext";
 
-const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS;
-
 export const useChatWebsocket = () => {
-  console.log("WS URL:", process.env.NEXT_PUBLIC_BACKEND_WS);
+  const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS;
+  console.log("WS URL:", WS_URL);
 
   const { play, stopAll, playbackStream } = useAudioPlayback();
   const { setMessages } = useChat();
@@ -38,7 +37,7 @@ export const useChatWebsocket = () => {
   );
 
   const { sendData, isConnected, isConnecting, error } = useWebsocket(
-    WS_URL,
+    WS_URL!,
     handleMessage
   );
 
