@@ -2,7 +2,10 @@ import os
 import aiohttp
 import struct
 import json
-from features.common.types.exceptions import BaseSawtException
+from features.common.types.exceptions import BaseSawtException, ProviderException
+import logging
+
+logger = logging.getLogger(__name__)
 
 HF_TOKEN = os.getenv("HUGGING_FACE_API_TOKEN")
 MODEL_ID = os.getenv("HUGGING_FACE_TRANSCRIPTION_MODEL")
@@ -26,7 +29,9 @@ class TranscriptionRepository:
                 async with session.post(HF_URL, data=wav, headers=headers) as r:
                     body = await r.text()
                     if r.status != 200:
-                        raise RuntimeError(f"HuggingFace error {r.status}: {body}")
+                        raise ProviderException(
+                            message=f"HuggingFace error {r.status}: {body}",
+                        )
                     data = json.loads(body)
 
             # HF ASR returns either {"text": "..."} or a list of segments; handle both.
@@ -34,7 +39,11 @@ class TranscriptionRepository:
                 return data["text"]
             if isinstance(data, list):
                 return "".join(part.get("text", "") for part in data)
+        except ProviderException as e:
+            logger.warning(f"HuggingFace error {r.status}: {body}")
+            raise e
         except Exception as e:
+            logger.error(f"Error transcribing audio: {str(e)}")
             raise BaseSawtException(
                 code="TRANSCRIPTION_FAILED",
                 message=str(e),

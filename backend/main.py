@@ -2,8 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from features.chat.controllers.websocket_controller import router as websocket_router
 from infrastructure.middlewares.exception_handler import global_exception_handler
+from infrastructure.logging.logging_config import configure_logging
 import dspy
 import os
+
+# Configure logging first, before any other imports
+configure_logging()
 
 dspy.configure(
     lm=dspy.LM(

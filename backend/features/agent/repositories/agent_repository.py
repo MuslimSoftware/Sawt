@@ -1,6 +1,11 @@
 from features.agent.types.signatures import ConversationSig
 from dspy import History
 import dspy
+from litellm import RateLimitError
+import logging
+from features.common.types.exceptions import ProviderException, RateLimitException
+
+logger = logging.getLogger(__name__)
 
 class AgentRepository:
 
@@ -9,10 +14,18 @@ class AgentRepository:
 
     def get_response(self, prompt: str) -> tuple[str, bool]:
         """Calls the DSPy module to get a response."""
-        result = dspy.Predict(ConversationSig)(user_utterance=prompt, conversation_history=self.history)
-        ai_response = result.assistant_utterance
-        is_directed_at_agent = result.is_directed_at_agent
+        try:
+            result = dspy.Predict(ConversationSig)(user_utterance=prompt, conversation_history=self.history)
+            ai_response = result.assistant_utterance
+            is_directed_at_agent = result.is_directed_at_agent
 
-        self.history.messages.append({"user_utterance": prompt, "assistant_utterance": ai_response})
+            self.history.messages.append({"user_utterance": prompt, "assistant_utterance": ai_response})
 
-        return ai_response, is_directed_at_agent
+            return ai_response, is_directed_at_agent
+        except RateLimitError as e:
+            logger.warning(f"Rate limit error: {e}")
+            raise RateLimitException(message=str(e))
+
+        except Exception as e:
+            logger.error(f"Error getting response: {e}")
+            raise ProviderException(message=str(e))
