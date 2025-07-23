@@ -1,29 +1,28 @@
 # Sawt Voice Assistant
 
-A real-time voice assistant built with Next.js, Python FastAPI, and Whisper.cpp for speech-to-text transcription.
+A real-time voice assistant built with Next.js, Python FastAPI, and Whisper for speech-to-text transcription.
 
 ## Features
 
-- 🎤 Real-time microphone input
-- 🗣️ Speech-to-text using Whisper.cpp
+- 🎤 Real-time microphone input with mobile support
+- 🗣️ Speech-to-text using Whisper
 - 🤖 AI-powered voice responses
 - 🔄 WebSocket-based streaming
-- 🐳 Docker containerization
+- 🐳 Docker containerization for local and production environments
 
 ## Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
-- VPS or local machine
+- A `.env.dev` and `.env.prod` file (based on `env.example`)
 
 ### Local Development
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd Sawt
+# Build the services using the dev-specific compose file and .env.dev
+docker compose -f docker-compose.dev.yml --env-file .env.dev build
 
 # Start the services
-docker-compose up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev up
 
 # Access the application
 # Frontend: http://localhost:3000
@@ -32,21 +31,23 @@ docker-compose up -d
 
 ### Production Deployment
 ```bash
-# Build and start on VPS
-docker-compose build
-docker-compose up -d
+# Build the services using the .env.prod file
+docker compose --env-file .env.prod build
 
-# Access via your VPS IP
-# Frontend: http://YOUR_VPS_IP:3000
-# Backend: http://YOUR_VPS_IP:8000
+# Start the services in detached mode
+docker compose --env-file .env.prod up -d
+
+# Access via your server's IP or domain
+# Frontend: http://YOUR_SERVER_IP:3000
+# Backend: http://YOUR_SERVER_IP:8000
 ```
 
 ## Architecture
 
 - **Frontend**: Next.js with TypeScript, real-time audio processing
 - **Backend**: Python FastAPI with WebSocket support
-- **Speech Recognition**: Whisper.cpp (Rust bindings)
-- **AI Integration**: DSPy framework for intelligent responses
+- **Speech Recognition**: Whisper
+- **AI Integration**: Your chosen AI model
 
 ## License
 
@@ -68,4 +69,4 @@ For questions or support, please open an issue on GitHub.
 
 ---
 
-**Note**: This project is designed for personal and educational use only. Commercial use is not permitted under the license terms. 
+**Note**: This project is designed for personal and educational use only. Commercial use is not permitted under the license terms.
