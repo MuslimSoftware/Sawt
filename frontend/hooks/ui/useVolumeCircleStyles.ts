@@ -22,16 +22,16 @@ export const useVolumeCircleStyles = ({ micLevel, playbackLevel }: UseVolumeCirc
 
     const backgroundColor = useMemo(() => {
         if (isUserSpeaking) return colors.microphone.userSpeaking;
-        if (isLoading) return colors.microphone.loading;
         if (isAgentSpeaking) return colors.microphone.agentSpeaking;
+        if (isLoading) return colors.microphone.loading;
         if (isSilent) return colors.microphone.silent;
         return colors.microphone.silent;
     }, [isUserSpeaking, isAgentSpeaking, isLoading, isSilent]);
 
     const boxShadow = useMemo(() => {
         if (isUserSpeaking) return `0 0 25px ${colors.microphoneGlow.userSpeaking}`;
-        if (isLoading) return `0 0 25px ${colors.microphoneGlow.loading}`;
         if (isAgentSpeaking) return `0 0 25px ${colors.microphoneGlow.agentSpeaking}`;
+        if (isLoading) return `0 0 25px ${colors.microphoneGlow.loading}`;
         if (isSilent) return `0 0 30px ${colors.microphoneGlow.silent}`;
         return 'none';
     }, [isSilent, isLoading, isUserSpeaking, isAgentSpeaking]);

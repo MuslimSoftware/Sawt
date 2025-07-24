@@ -34,7 +34,7 @@ This document provides a map of the frontend directory to help you understand th
 - `LatestMessage.tsx`: A component that displays the latest message, now applies per-message 0.5 opacity fade on stop and clears fade when the message updates.
 - `MicrophoneVisualizer.tsx`: A component that visualizes the microphone input.
 - `VolumeCircle.module.css`: CSS module for the volume circle component.
-- `VolumeCircle.tsx`: A component that displays a circle representing the volume level. Loading state now pulses blue instead of white.
+- `VolumeCircle.tsx`: A component that displays a circle representing the volume level. Loading state now pulses blue instead of white, ignored while user or agent speaking.
 
 ### `header/`
 

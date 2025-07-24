@@ -22,10 +22,9 @@ class AgentRepository:
             self.history.messages.append({"user_utterance": prompt, "assistant_utterance": ai_response})
 
             return ai_response, is_directed_at_agent
-        except RateLimitError as e:
-            logger.warning(f"Rate limit error: {e}")
-            raise RateLimitException(message=str(e))
-
         except Exception as e:
-            logger.error(f"Error getting response: {e}")
+            if "RESOURCE_EXHAUSTED" in str(e):
+                logger.error(f"Error getting response: {e}")
+                raise RateLimitException(message=str(e))
+            
             raise ProviderException(message=str(e))
