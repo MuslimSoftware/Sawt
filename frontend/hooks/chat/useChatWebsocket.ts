@@ -13,6 +13,7 @@ export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<Rea
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
+      // console.log("Received message:", event.data);
       setIsLoading(false);
       // Play incoming audio stream
       if (event.data instanceof ArrayBuffer) {

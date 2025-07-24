@@ -34,7 +34,7 @@ This document provides a map of the frontend directory to help you understand th
 - `LatestMessage.tsx`: A component that displays the latest message.
 - `MicrophoneVisualizer.tsx`: A component that visualizes the microphone input.
 - `VolumeCircle.module.css`: CSS module for the volume circle component.
-- `VolumeCircle.tsx`: A component that displays a circle representing the volume level.
+- `VolumeCircle.tsx`: A component that displays a circle representing the volume level. Loading state now pulses blue instead of white.
 
 ### `header/`
 
@@ -53,9 +53,8 @@ This document provides a map of the frontend directory to help you understand th
 
 ### `chat/`
 
-- `useChatMicrophone.ts`: A hook for managing the microphone in the chat.
-- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat. It accepts a `setMessages` function and returns the websocket status, a `sendData` function, the playback stream, and a loading status. It also manages an `isAwaitingResponse` state to prevent the loading indicator from being shown while the user is speaking.
-- `useSpeakingHistory.ts`: A hook for managing the speaking history.
+- `useChatMicrophone.ts`: A hook for managing the microphone in the chat. It intelligently handles sending a `stop` event to the backend exactly once, whether the user stops speaking naturally (detected via silence) or explicitly mutes the microphone.
+- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat. It accepts a `setMessages` function and returns the websocket status, a `sendData` function, the playback stream, and a loading status.
 
 ### `common/`
 

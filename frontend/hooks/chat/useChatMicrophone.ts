@@ -6,26 +6,47 @@ import { useCallback, useState } from 'react';
  */
 export const useChatMicrophone = ({ send }: { send: (data: string | ArrayBuffer) => void; }) => {
   const [muted, setMuted] = useState(false);
-
-  const toggleMute = useCallback(() => setMuted(m => !m), []);
+  const [isTransmitting, setIsTransmitting] = useState(false);
 
   const onData = useCallback(
-    (buf: ArrayBuffer) => !muted && send(buf),
-    [muted, send]
+    (buf: ArrayBuffer) => {
+      if (!muted && isTransmitting) {
+        send(buf);
+      }
+    },
+    [muted, isTransmitting, send]
   );
 
-  const onStart = useCallback(() => {}, []);
+  const sendStopSignal = useCallback(() => {
+    if (isTransmitting) {
+      send(JSON.stringify({ event: 'stop' }));
+      setIsTransmitting(false);
+    }
+  }, [isTransmitting, send]);
 
-  const onStop = useCallback(
-    () => send(JSON.stringify({ event: 'stop' })),
-    [send]
-  );
+  const onStart = useCallback(() => {
+    setIsTransmitting(true);
+  }, []);
+
+  const onStop = useCallback(() => {
+    sendStopSignal();
+  }, [sendStopSignal]);
+
+  const toggleMute = useCallback(() => {
+    setMuted(currentMuted => {
+      const newMuted = !currentMuted;
+      if (newMuted) {
+        sendStopSignal();
+      }
+      return newMuted;
+    });
+  }, [sendStopSignal]);
 
   const { isMicrophoneGranted, micStream } = useMicrophone({
     onData,
     onStart,
     onStop,
-    voiceThreshold: 0.5,
+    voiceThreshold: 0.1,
   });
 
   return { isMicrophoneGranted, micStream, muted, toggleMute } as const;
