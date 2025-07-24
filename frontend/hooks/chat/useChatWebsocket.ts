@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useAudioPlayback } from "@/hooks/base/useAudioPlayback";
 import { useWebsocket } from "@/hooks/base/useWebsocket";
-import { useChat } from "@/contexts/ChatContext";
+import { Message } from "@/contexts/ChatContext";
 
 const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS || "wss://sawt-api.younesbenketira.com/ws/chat";
 
-export const useChatWebsocket = () => {
+export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<React.SetStateAction<Message[]>>}) => {
   const { play, stopAll, playbackStream } = useAudioPlayback();
-  const { setMessages } = useChat();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       // console.log("Received message:", event.data);
       // Play incoming audio stream
       if (event.data instanceof ArrayBuffer) {
+        setIsLoading(false);
         play(event.data);
         return;
       }
@@ -28,6 +29,7 @@ export const useChatWebsocket = () => {
           if (message.event === "stop_audio") stopAll();
           break;
         case "text":
+          setIsLoading(message.role === "ai");
           setMessages((prev) => [...prev, { role: message.role, content: message.text }]);
           break;
       }
@@ -40,5 +42,10 @@ export const useChatWebsocket = () => {
     handleMessage
   );
 
-  return { sendData, playbackStream, isConnected, isConnecting, error } as const;
+  const send = useCallback((data: string | ArrayBuffer) => {
+    setIsLoading(true);
+    sendData(data);
+  }, [sendData]);
+
+  return { sendData: send, playbackStream, isConnected, isConnecting, error, isLoading } as const;
 };

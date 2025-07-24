@@ -47,14 +47,14 @@ This document provides a map of the frontend directory to help you understand th
 
 ## `contexts/`
 
-- `ChatContext.tsx`: A context for managing chat state.
+- `ChatContext.tsx`: A context for managing chat state, including messages, loading status, and a function for sending data.
 
 ## `hooks/`
 
 ### `chat/`
 
 - `useChatMicrophone.ts`: A hook for managing the microphone in the chat.
-- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat.
+- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat. It accepts a `setMessages` function and returns the websocket status, a `sendData` function, the playback stream, and a loading status.
 - `useSpeakingHistory.ts`: A hook for managing the speaking history.
 
 ### `common/`

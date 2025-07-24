@@ -4,21 +4,21 @@ import { useCallback, useState } from 'react';
 /**
  * Hook for chat microphone: streams PCM and handles mute toggle.
  */
-export const useChatMicrophone = (sendData: (data: string | ArrayBuffer) => void) => {
+export const useChatMicrophone = ({ send }: { send: (data: string | ArrayBuffer) => void; }) => {
   const [muted, setMuted] = useState(false);
 
   const toggleMute = useCallback(() => setMuted(m => !m), []);
 
   const onData = useCallback(
-    (buf: ArrayBuffer) => !muted && sendData(buf),
-    [muted, sendData]
+    (buf: ArrayBuffer) => !muted && send(buf),
+    [muted, send]
   );
 
   const onStart = useCallback(() => {}, []);
 
   const onStop = useCallback(
-    () => sendData(JSON.stringify({ event: 'stop' })),
-    [sendData]
+    () => send(JSON.stringify({ event: 'stop' })),
+    [send]
   );
 
   const { isMicrophoneGranted, micStream } = useMicrophone({
