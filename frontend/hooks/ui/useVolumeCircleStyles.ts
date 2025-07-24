@@ -11,13 +11,12 @@ type UseVolumeCircleStylesProps = {
 };
 
 export const useVolumeCircleStyles = ({ micLevel, playbackLevel }: UseVolumeCircleStylesProps) => {
-    const { isLoading: isLoadingProp } = useChat();
-    const { isUserSpeaking, isAgentSpeaking, isSilent, isLoading: isSpeakingLoading } = useSpeakingState({
+    const { isLoading } = useChat();
+    const { isUserSpeaking, isAgentSpeaking, isSilent } = useSpeakingState({
         micLevel,
         playbackLevel,
     });
 
-    const isLoading = isLoadingProp || isSpeakingLoading;
     const activeLevel = Math.max(micLevel, playbackLevel);
     const scale = 1 + (activeLevel * 3);
 

@@ -6,10 +6,9 @@ import { MicStatusBadge } from "@/components/header/MicStatusBadge";
 import styles from "./BadgeHeader.module.css";
 
 export const BadgeHeader: React.FC = () => {
-  const { isConnected, isConnecting, error, isMicrophoneGranted, muted, toggleMute, isLoading } = useChat();
+  const { isConnected, isConnecting, error, isMicrophoneGranted, muted, toggleMute } = useChat();
   return (
     <div className={styles.container}>
-      {isLoading && <span>Loading</span>}
       <WebsocketStatusPill connected={isConnected} connecting={isConnecting} error={error} />
       <MicStatusBadge granted={isMicrophoneGranted} muted={muted} onToggle={toggleMute} />
     </div>

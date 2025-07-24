@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useDebouncedBoolean } from '@/hooks/common/useDebouncedBoolean';
-import { useSpeakingHistory } from '@/hooks/chat/useSpeakingHistory';
 
 interface UseSpeakingStateProps {
   micLevel: number;
@@ -15,7 +14,6 @@ interface SpeakingState {
   isUserSpeaking: boolean;
   isAgentSpeaking: boolean;
   isSilent: boolean;
-  isLoading: boolean;
 }
 
 export const useSpeakingState = ({
@@ -34,36 +32,18 @@ export const useSpeakingState = ({
   const isUserSpeakingDebounced = useDebouncedBoolean(isUserSpeaking, userDelay);
   const isAgentSpeakingDebounced = useDebouncedBoolean(isAgentSpeaking, agentDelay);
 
-  // Track speaking history
-  const wasUserSpeaking = useSpeakingHistory(
-    isUserSpeaking,
-    isAgentSpeakingDebounced,
-    isUserSpeakingDebounced,
-    isAgentSpeaking
-  );
-
-  // Memoize loading state
-  const isLoading = useMemo(() => 
-    !isUserSpeakingDebounced && 
-    !isAgentSpeakingDebounced && 
-    wasUserSpeaking && 
-    !isAgentSpeaking,
-    [isUserSpeakingDebounced, isAgentSpeakingDebounced, wasUserSpeaking, isAgentSpeaking]
-  );
-
   // Memoize final states with priority logic
   const finalStates = useMemo(() => {
     const finalUserSpeaking = isUserSpeakingDebounced && !isAgentSpeakingDebounced;
     const finalAgentSpeaking = isAgentSpeakingDebounced;
-    const finalSilent = !finalUserSpeaking && !finalAgentSpeaking && !isLoading;
+    const finalSilent = !finalUserSpeaking && !finalAgentSpeaking;
 
     return {
       isUserSpeaking: finalUserSpeaking,
       isAgentSpeaking: finalAgentSpeaking,
-      isSilent: finalSilent,
-      isLoading,
+      isSilent: finalSilent
     };
-  }, [isUserSpeakingDebounced, isAgentSpeakingDebounced, isLoading]);
+  }, [isUserSpeakingDebounced, isAgentSpeakingDebounced]);
 
   return finalStates;
-}; 
+};
