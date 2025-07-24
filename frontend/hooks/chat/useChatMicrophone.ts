@@ -25,7 +25,7 @@ export const useChatMicrophone = ({ send }: { send: (data: string | ArrayBuffer)
     onData,
     onStart,
     onStop,
-    voiceThreshold: 0.05,
+    voiceThreshold: 0.5,
   });
 
   return { isMicrophoneGranted, micStream, muted, toggleMute } as const;

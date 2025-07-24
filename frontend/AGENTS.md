@@ -54,7 +54,7 @@ This document provides a map of the frontend directory to help you understand th
 ### `chat/`
 
 - `useChatMicrophone.ts`: A hook for managing the microphone in the chat.
-- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat. It accepts a `setMessages` function and returns the websocket status, a `sendData` function, the playback stream, and a loading status. It also manages an `isReceiving` state to prevent the loading indicator from being shown while the user is speaking.
+- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat. It accepts a `setMessages` function and returns the websocket status, a `sendData` function, the playback stream, and a loading status. It also manages an `isAwaitingResponse` state to prevent the loading indicator from being shown while the user is speaking.
 - `useSpeakingHistory.ts`: A hook for managing the speaking history.
 
 ### `common/`

@@ -17,7 +17,7 @@ class SpeechRepository:
             audio_buffer = bytearray()
 
             # Use edge-tts to generate speech
-            communicate = edge_tts.Communicate(text, "en-US-AvaMultilingualNeural")
+            communicate = edge_tts.Communicate(text, "en-US-BrianMultilingualNeural")
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     audio_buffer.extend(chunk["data"])

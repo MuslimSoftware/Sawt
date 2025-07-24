@@ -23,7 +23,9 @@ export const VolumeCircle = ({ micLevel, playbackLevel }: VolumeCircleProps) => 
                     transform: transform,
                     boxShadow: boxShadow,
                 }}
-            />
+            >
+                {isLoading && <span>Loading</span>}
+            </div>
         </div>
     );
 };
