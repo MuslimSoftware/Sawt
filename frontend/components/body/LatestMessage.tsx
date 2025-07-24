@@ -1,5 +1,5 @@
 import { useChat } from "@/contexts/ChatContext";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import styles from "./LatestMessage.module.css";
 
 interface LatestMessageProps {
@@ -7,16 +7,27 @@ interface LatestMessageProps {
 }
 
 export const LatestMessage = ({ role }: LatestMessageProps) => {
-    const { messages } = useChat();
-    
+    const { messages, isLoading } = useChat();
+    const [faded, setFaded] = useState(false);
+    const [prevMessage, setPrevMessage] = useState<string | undefined>(undefined);
+
     const latestMessage = useMemo(() => 
         messages.findLast(message => message.role === role)?.content, 
         [messages, role]
     );
 
-    const containerClassName = useMemo(() => {
-        return `${styles.container} ${styles[role]}`;
-    }, [role]);
+    useEffect(() => {
+        if (isLoading) setFaded(true);
+    }, [isLoading]);
+
+    useEffect(() => {
+        if (latestMessage !== prevMessage) {
+            setFaded(false);
+            setPrevMessage(latestMessage);
+        }
+    }, [latestMessage, prevMessage]);
+
+    const containerClassName = `${styles.container} ${styles[role]} ${faded ? styles.faded : ''}`;
 
     return (
         <div className={containerClassName}>

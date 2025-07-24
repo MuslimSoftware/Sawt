@@ -31,7 +31,7 @@ This document provides a map of the frontend directory to help you understand th
 - `CenterContent.module.css`: CSS module for the center content component.
 - `CenterContent.tsx`: A component that centers its children.
 - `LatestMessage.module.css`: CSS module for the latest message component.
-- `LatestMessage.tsx`: A component that displays the latest message.
+- `LatestMessage.tsx`: A component that displays the latest message, now applies per-message 0.5 opacity fade on stop and clears fade when the message updates.
 - `MicrophoneVisualizer.tsx`: A component that visualizes the microphone input.
 - `VolumeCircle.module.css`: CSS module for the volume circle component.
 - `VolumeCircle.tsx`: A component that displays a circle representing the volume level. Loading state now pulses blue instead of white.
