@@ -39,8 +39,8 @@ class ChatService:
         except Exception as e:
             await self.send_text("ai", "[Error: Transcription Error]") 
             return
-
-        await self.send_text("user", user_transcribed_speech)
+        finally:
+            await self.send_text("user", user_transcribed_speech)
 
         try:
             agent_response, is_directed_at_agent = self.agent_service.get_response(user_transcribed_speech)
@@ -50,12 +50,17 @@ class ChatService:
         except ProviderException as e:
             await self.send_text("ai", "[Error: Agent Model Provider Error]")
             return
+        finally:
+            await self.send_text("user", user_transcribed_speech)
         
         if is_directed_at_agent and agent_response:
-            await self.send_text("ai", agent_response)
             try:
                 audio_bytes = await self.speech_service.text_to_speech(agent_response)
-                await self.send_audio(audio_bytes)
+                await asyncio.gather(
+                    self.send_audio(audio_bytes),
+                    self.send_text("user", user_transcribed_speech),
+                    self.send_text("ai", agent_response)
+                )
             except Exception as e:
                 await self.send_text("ai", "[Error: TTS Error]")
                 return
