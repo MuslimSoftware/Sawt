@@ -7,7 +7,7 @@ type VolumeCircleProps = {
 };
 
 export const VolumeCircle = ({ micLevel, playbackLevel }: VolumeCircleProps) => {
-    const { backgroundColor, boxShadow, transform, isLoading } = useVolumeCircleStyles({
+    const { backgroundColor, boxShadow, transform, isLoading, isSilent, isUserSpeaking, isAgentSpeaking } = useVolumeCircleStyles({
         micLevel,
         playbackLevel,
     });
@@ -16,6 +16,10 @@ export const VolumeCircle = ({ micLevel, playbackLevel }: VolumeCircleProps) => 
 
     return (
         <div className={styles.container}>
+            {isLoading && <span>Loading</span>}
+            {isSilent && <span>Silent</span>}
+            {isUserSpeaking && <span>User Speaking</span>}
+            {isAgentSpeaking && <span>Agent Speaking</span>}
             <div
                 className={circleClassName}
                 style={{

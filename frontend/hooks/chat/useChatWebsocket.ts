@@ -10,6 +10,7 @@ const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS || "wss://sawt-api.younesbenke
 export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<React.SetStateAction<Message[]>>}) => {
   const { play, stopAll, playbackStream } = useAudioPlayback();
   const [isLoading, setIsLoading] = useState(false);
+  const [isReceiving, setIsReceiving] = useState(false);
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
@@ -17,6 +18,7 @@ export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<Rea
       // Play incoming audio stream
       if (event.data instanceof ArrayBuffer) {
         setIsLoading(false);
+        setIsReceiving(true);
         play(event.data);
         return;
       }
@@ -26,10 +28,13 @@ export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<Rea
       
       switch (message.type) {
         case "control":
-          if (message.event === "stop_audio") stopAll();
+          if (message.event === "stop_audio") {
+            stopAll();
+            setIsReceiving(false);
+          }
           break;
         case "text":
-          setIsLoading(message.role === "ai");
+          setIsLoading(false);
           setMessages((prev) => [...prev, { role: message.role, content: message.text }]);
           break;
       }
@@ -43,9 +48,11 @@ export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<Rea
   );
 
   const send = useCallback((data: string | ArrayBuffer) => {
-    setIsLoading(true);
+    if (!isReceiving) {
+      setIsLoading(true);
+    }
     sendData(data);
-  }, [sendData]);
+  }, [sendData, isReceiving]);
 
   return { sendData: send, playbackStream, isConnected, isConnecting, error, isLoading } as const;
 };

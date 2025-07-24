@@ -40,4 +40,4 @@ app.include_router(websocket_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Sawt Backend is running"}
+    return {"message": "Welcome to the Sawt Backend"}
