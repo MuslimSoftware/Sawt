@@ -12,6 +12,9 @@ node_modules/
 .env.prod
 .env.dev
 
+# TMP
+tmp/
+
 # Python
 __pycache__/
 *.py[cod]

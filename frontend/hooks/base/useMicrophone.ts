@@ -1,21 +1,27 @@
 import { useEffect, useState } from 'react';
+import { useLatest } from '../common/useLatest';
 
 const WORKLET_PATH = '/audio-worklet/down-sampler.js';
 
-type Cb = () => void;
-interface Props {
-  onData?: (buf: ArrayBuffer) => void;
-  onStart?: Cb;
-  onStop?: Cb;
-  voiceThreshold?: number;
+const AUDIO_CONFIGS = {
+  voiceThreshold : 0.06,
+  silenceTimeoutMs : 3000,
+  preBufferMs    : 500,
+  speakingGraceMs: 250,
+}
+
+export interface WorkletMessage {
+  event?: 'start' | 'stop';
+  audio?: ArrayBuffer;
 }
 
 /**
- * Grants mic access, streams down-sampled PCM to `onData`,
- * and returns both the permission flag and the live MediaStream.
+ * Grants mic access, streams down-sampled PCM, and returns the live MediaStream
+ * along with the latest data packet from the audio worklet.
  */
-export function useMicrophone({ onData, onStart, onStop, voiceThreshold }: Props) {
-  const [{ granted, stream }, set] = useState<{ granted: boolean; stream: MediaStream | null }>({ granted: false, stream: null });
+export function useMicrophone({ onMessage }: { onMessage: (msg: WorkletMessage) => void; }) {
+  const [{ granted, stream }, setStreamState] = useState<{ granted: boolean; stream: MediaStream | null }>({ granted: false, stream: null });
+  const onMessageRef = useLatest(onMessage);
 
   useEffect(() => {
     let ctx: AudioContext;
@@ -32,16 +38,14 @@ export function useMicrophone({ onData, onStart, onStop, voiceThreshold }: Props
         await ctx.audioWorklet.addModule(WORKLET_PATH);
         if (ctx.state !== 'running') await ctx.resume().catch(() => {});
 
-        node = new AudioWorkletNode(ctx, 'down-sampler', { processorOptions: { voiceThreshold } } as any);
-        node.port.onmessage = ({ data }) => {
-          data.event === 'stop' && onStop?.();
-          data.audio && onData?.(data.audio);
-          data.event === 'start' && onStart?.();
-        };
+        node = new AudioWorkletNode(ctx, 'down-sampler', {
+          processorOptions: { ...AUDIO_CONFIGS }
+        });
+        node.port.onmessage = ({ data }) => onMessageRef.current(data);
 
         ctx.createMediaStreamSource(mic).connect(node);
         node.connect(ctx.destination);
-        set({ granted: true, stream: mic });
+        setStreamState({ granted: true, stream: mic });
       } catch (e) {
         console.error('Microphone setup failed:', e);
       }
@@ -52,9 +56,9 @@ export function useMicrophone({ onData, onStart, onStop, voiceThreshold }: Props
       stream?.getTracks().forEach(t => t.stop());
       node?.disconnect();
       ctx?.close().catch(() => {});
-      set({ granted: false, stream: null });
+      setStreamState({ granted: false, stream: null });
     };
-  }, [voiceThreshold, onData, onStart, onStop]);
+  }, []);
 
   return { isMicrophoneGranted: granted, micStream: stream } as const;
 }

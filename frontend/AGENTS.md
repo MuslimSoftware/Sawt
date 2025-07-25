@@ -34,7 +34,7 @@ This document provides a map of the frontend directory to help you understand th
 - `LatestMessage.tsx`: A component that displays the latest message, now applies per-message 0.5 opacity fade on stop and clears fade when the message updates.
 - `MicrophoneVisualizer.tsx`: A component that visualizes the microphone input.
 - `VolumeCircle.module.css`: CSS module for the volume circle component.
-- `VolumeCircle.tsx`: A component that displays a circle representing the volume level. Loading state now pulses blue instead of white, ignored while user or agent speaking.
+- `VolumeCircle.tsx`: A component that displays a circle representing the volume level. Loading state now pulses blue instead of white, ignored while user or agent speaking. VoiceActivityDetector now pre-buffers audio to capture the start of speech.
 
 ### `header/`
 
@@ -54,7 +54,7 @@ This document provides a map of the frontend directory to help you understand th
 ### `chat/`
 
 - `useChatMicrophone.ts`: A hook for managing the microphone in the chat. It intelligently handles sending a `stop` event to the backend exactly once, whether the user stops speaking naturally (detected via silence) or explicitly mutes the microphone.
-- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat. It accepts a `setMessages` function and returns the websocket status, a `sendData` function, the playback stream, and a loading status.
+- `useChatWebsocket.ts`: A hook for managing the websocket connection in the chat. It accepts a `setMessages` function and returns the websocket status, a `sendData` function, the playback stream, and a loading status. Loading state triggers on all sends, including string events and audio buffers.
 
 ### `common/`
 
@@ -75,7 +75,7 @@ This document provides a map of the frontend directory to help you understand th
 
 ### `audio-worklet/`
 
-- `down-sampler.js`: An audio worklet for down-sampling audio.
+- `down-sampler.js`: An audio worklet for down-sampling audio; fixed double flushPrebuffer transfer bug.
 - `level-meter.js`: An audio worklet for measuring audio levels.
 
 ## `theme/`

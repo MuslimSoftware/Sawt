@@ -19,6 +19,9 @@ class TranscriptionRepository:
     async def transcribe(pcm_bytes: bytes) -> str:
         """Send raw 16kHz mono 16-bit PCM to Hugging Face and return transcription text."""
         wav = TranscriptionRepository._wrap_wav(pcm_bytes)
+
+        TranscriptionRepository._save_wav(wav)
+
         headers = {
             "Authorization": f"Bearer {HF_TOKEN}",
             "Content-Type": "audio/wav"
@@ -69,3 +72,12 @@ class TranscriptionRepository:
             b"data",
             len(pcm),
         ) + pcm
+    
+    @staticmethod
+    def _save_wav(wav: bytes):
+        """Save wav to tmp/current_audio.wav"""
+        tmp_dir = os.path.join(os.getcwd(), "tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+        file_path = os.path.join(tmp_dir, "current_audio.wav")
+        with open(file_path, "wb") as f:
+            f.write(wav)

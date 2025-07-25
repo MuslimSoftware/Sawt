@@ -15,6 +15,7 @@ class AgentRepository:
     def get_response(self, prompt: str) -> tuple[str, bool]:
         """Calls the DSPy module to get a response."""
         try:
+            logger.info(f"Getting response for prompt: {prompt}")
             result = dspy.Predict(ConversationSig)(user_utterance=prompt, conversation_history=self.history)
             ai_response = result.assistant_utterance
             is_directed_at_agent = result.is_directed_at_agent

@@ -44,7 +44,10 @@ export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<Rea
   );
 
   const send = useCallback((data: string | ArrayBuffer) => {
-    setIsLoading(true);
+    if (!(typeof data === "string" && data.includes(`{"event":"stop"}`))) {
+      setIsLoading(true);
+    }
+    
     sendData(data);
   }, [sendData]);
 

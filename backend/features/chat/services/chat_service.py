@@ -31,6 +31,8 @@ class ChatService:
             pcm_data = b''.join(self.buffer)
             self.buffer.clear()
 
+        logger.info(f"Handling stop event with {len(self.buffer)} chunks")
+
         try:
             user_transcribed_speech = await TranscriptionService.transcribe_audio(pcm_data)
         except ProviderException as e:
