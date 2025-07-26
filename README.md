@@ -1,11 +1,16 @@
-# Sawt Voice Assistant
+# Sawt (صوت)
 
-A real-time voice assistant built with Next.js, Python FastAPI, and Whisper for speech-to-text transcription.
+“Sawt” means “voice” in Arabic.
+
+A quick demo for a DIY voice agent (not real-time).
+
+Live demo: https://sawt.younesbenketira.com
 
 ## Features
 
 - 🎤 Real-time microphone input with mobile support
 - 🗣️ Speech-to-text using Whisper
+- 🔊 Edge TTS speech synthesis
 - 🤖 AI-powered voice responses
 - 🔄 WebSocket-based streaming
 - 🐳 Docker containerization for local and production environments
@@ -62,6 +67,10 @@ This project is licensed under a **Non-Commercial License**. See [LICENSE](LICEN
 ## Contributing
 
 Contributions are welcome! Please ensure any contributions maintain the non-commercial nature of this project.
+
+## Agent Metadata
+
+This repository's `AGENTS.md` is intended for opencode to know about the overall repository. Additional `AGENTS.md` files reside in the `backend/` and `frontend/` directories to describe their respective logic contexts.
 
 ## Support
 
