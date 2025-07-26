@@ -18,7 +18,7 @@ export const useVolumeCircleStyles = ({ micLevel, playbackLevel }: UseVolumeCirc
     });
 
     const activeLevel = Math.max(micLevel, playbackLevel);
-    const scale = 1 + (activeLevel * 3);
+    const scale = 1 + activeLevel * 3;
 
     const backgroundColor = useMemo(() => {
         if (isUserSpeaking) return colors.microphone.userSpeaking;
@@ -29,12 +29,10 @@ export const useVolumeCircleStyles = ({ micLevel, playbackLevel }: UseVolumeCirc
     }, [isUserSpeaking, isAgentSpeaking, isLoading, isSilent]);
 
     const boxShadow = useMemo(() => {
-        if (isUserSpeaking) return `0 0 25px ${colors.microphoneGlow.userSpeaking}`;
-        if (isAgentSpeaking) return `0 0 25px ${colors.microphoneGlow.agentSpeaking}`;
-        if (isLoading) return `0 0 25px ${colors.microphoneGlow.loading}`;
-        if (isSilent) return `0 0 30px ${colors.microphoneGlow.silent}`;
-        return 'none';
-    }, [isSilent, isLoading, isUserSpeaking, isAgentSpeaking]);
+        if (isSilent) return 'none';
+        const blur = isSilent ? '30px' : '25px';
+        return `0 0 ${blur} ${backgroundColor}`;
+    }, [backgroundColor, isSilent]);
 
     const transform = `scale(${scale})`;
 
