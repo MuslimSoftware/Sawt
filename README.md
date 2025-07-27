@@ -3,7 +3,7 @@
 
 A DIY voice agent:
 - streams voice to server
-- Transcribes speech ([whisper](https://huggingface.co/openai/whisper-large-v3))
+- Transcribes speech locally ([whisper](https://huggingface.co/openai/whisper-large-v3))
 - Prompts LLM ([DSPy](https://dspy.ai/))
 - TTS ([edge-tts](https://github.com/rany2/edge-tts))
 
