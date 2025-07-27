@@ -9,7 +9,7 @@ A DIY voice agent:
 
 Try it out: https://sawt.younesbenketira.com
 
-<video src="demo.mov" controls style="max-width: 100%;"></video>
+https://github.com/user-attachments/assets/8a79be39-c054-4151-b697-33132803a9b4
 
 ## Features
 
