@@ -3,6 +3,8 @@ uvicorn[standard]
 aiohttp
 python-dotenv
 huggingface-hub
+huggingface_hub[cli]
 transformers
+torch
 dspy
 edge-tts

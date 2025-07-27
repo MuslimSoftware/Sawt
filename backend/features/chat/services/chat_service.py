@@ -31,9 +31,10 @@ class ChatService:
             pcm_data = b''.join(self.buffer)
             self.buffer.clear()
 
-        logger.info(f"Handling stop event with {len(self.buffer)} chunks")
+        logger.info(f"Handling stop event with {len(pcm_data)} chunks")
 
         try:
+            await self.send_event("transcription_start")
             user_transcribed_speech = await TranscriptionService.transcribe_audio(pcm_data)
         except ProviderException as e:
             await self.send_text("ai", "[Error: Transcription Rate Limit Exceeded]")
@@ -41,23 +42,30 @@ class ChatService:
         except Exception as e:
             await self.send_text("ai", "[Error: Transcription Error]") 
             return
-        finally:
-            await self.send_text("user", user_transcribed_speech)
+        
+        logger.info(f"Transcription complete: {user_transcribed_speech}")
 
         try:
+            await self.send_event("get_agent_response_start")
             agent_response, is_directed_at_agent = self.agent_service.get_response(user_transcribed_speech)
         except RateLimitException as e:
+            await self.send_text("user", user_transcribed_speech)
             await self.send_text("ai", "[Error: Agent Model Rate Limit Exceeded]")
             return
         except ProviderException as e:
+            await self.send_text("user", user_transcribed_speech)
             await self.send_text("ai", "[Error: Agent Model Provider Error]")
             return
-        finally:
-            await self.send_text("user", user_transcribed_speech)
+        
+        logger.info(f"Agent response: {agent_response}")
         
         if is_directed_at_agent and agent_response:
             try:
+                await self.send_event("tts_start")
                 audio_bytes = await self.speech_service.text_to_speech(agent_response)
+
+                logger.info(f"Sending audio: {len(audio_bytes)} bytes")
+                
                 await asyncio.gather(
                     self.send_audio(audio_bytes),
                     self.send_text("user", user_transcribed_speech),
@@ -87,4 +95,15 @@ class ChatService:
             await conn_manager.send_bytes(data, self.websocket)
         except Exception as e:
             logger.critical(f"Websocket send audio error: {str(e)}")
+            return
+        
+    async def send_event(self, event: str):
+        """Sends a event to the client."""
+        try:
+            await conn_manager.send_json({
+                "type": "event",
+                "event": event
+            }, self.websocket)
+        except Exception as e:
+            logger.critical(f"Websocket send event error: {str(e)}")
             return

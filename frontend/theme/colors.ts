@@ -35,6 +35,14 @@ export const colors = {
     warning: 'rgba(255, 193, 7, 0.4)', // Yellow
     disabled: 'rgba(108, 117, 125, 0.5)', // Gray
   },
+
+  // System state pill colors
+  systemState: {
+    transcription_start: 'rgba(146, 40, 167, 1)', // Purple
+    get_agent_response_start: 'rgba(59, 130, 246, 1)', // Blue
+    tts_start: 'rgb(255, 156, 7)', // Orange
+    idle: 'rgba(108, 117, 125, 0.1)', // Gray
+  },
   
   // UI element colors
   ui: {

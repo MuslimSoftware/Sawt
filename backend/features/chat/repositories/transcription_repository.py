@@ -1,61 +1,58 @@
-import os
-import aiohttp
-import struct
-import json
-from features.common.types.exceptions import BaseSawtException, ProviderException
-import logging
+import os, asyncio, logging, struct
+import numpy as np
+import torch
+from transformers import pipeline
+from features.common.types.exceptions import BaseSawtException
+
+PCM_RATE     = 16000
+SAMPLE_WIDTH = 2  # bytes per sample (16‑bit mono)
+
+# ── one‑time model load ────────────────────────────────────────────────
+MODEL_ID = os.getenv("HUGGING_FACE_TRANSCRIPTION_MODEL", "openai/whisper-base")
+device   = 0 if torch.cuda.is_available() else -1          # -1 → CPU
+asr_pipe = pipeline(
+    task="automatic-speech-recognition",
+    model=MODEL_ID,
+    device=device,
+)
 
 logger = logging.getLogger(__name__)
-
-HF_TOKEN = os.getenv("HUGGING_FACE_API_TOKEN")
-MODEL_ID = os.getenv("HUGGING_FACE_TRANSCRIPTION_MODEL")
-HF_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
-
-PCM_RATE = 16000
-SAMPLE_WIDTH = 2  # bytes per sample (16-bit mono)
 
 class TranscriptionRepository:
     @staticmethod
     async def transcribe(pcm_bytes: bytes) -> str:
-        """Send raw 16kHz mono 16-bit PCM to Hugging Face and return transcription text."""
-        wav = TranscriptionRepository._wrap_wav(pcm_bytes)
+        # 1️⃣  Save the incoming audio exactly like before -------------
+        wav_bytes = TranscriptionRepository._wrap_wav(pcm_bytes)
+        TranscriptionRepository._save_wav(wav_bytes)
+        # -------------------------------------------------------------
 
-        TranscriptionRepository._save_wav(wav)
-
-        headers = {
-            "Authorization": f"Bearer {HF_TOKEN}",
-            "Content-Type": "audio/wav"
-        }
+        # 2️⃣  Run Whisper locally (non‑blocking for the event‑loop)
+        loop  = asyncio.get_running_loop()
+        audio = TranscriptionRepository._pcm_to_float32(pcm_bytes)
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(HF_URL, data=wav, headers=headers) as r:
-                    body = await r.text()
-                    if r.status != 200:
-                        raise ProviderException(
-                            message=f"HuggingFace error {r.status}: {body}",
-                        )
-                    data = json.loads(body)
-
-            # HF ASR returns either {"text": "..."} or a list of segments; handle both.
-            if isinstance(data, dict) and "text" in data:
-                return data["text"]
-            if isinstance(data, list):
-                return "".join(part.get("text", "") for part in data)
-        except ProviderException as e:
-            logger.warning(f"HuggingFace error {r.status}: {body}")
-            raise e
+            result = await loop.run_in_executor(
+                None, lambda: asr_pipe(audio, chunk_length_s=30, stride_length_s=5)
+            )
+            return result["text"]
         except Exception as e:
-            logger.error(f"Error transcribing audio: {str(e)}")
+            logger.exception("Error transcribing audio")
             raise BaseSawtException(
                 code="TRANSCRIPTION_FAILED",
                 message=str(e),
                 status_code=500,
             )
 
+    # ── helpers ────────────────────────────────────────────────────────
+    @staticmethod
+    def _pcm_to_float32(pcm_bytes: bytes) -> np.ndarray:
+        """Convert 16‑bit PCM to float32 in the range ‑1…1."""
+        data = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32)
+        return data / 32768.0
+
     @staticmethod
     def _wrap_wav(pcm: bytes) -> bytes:
-        """Wrap raw PCM in a minimal WAV container."""
+        """Wrap raw PCM in a minimal 16 kHz mono WAV container."""
         return struct.pack(
             "<4sI4s4sIHHIIHH4sI",
             b"RIFF",
@@ -63,8 +60,8 @@ class TranscriptionRepository:
             b"WAVE",
             b"fmt ",
             16,
-            1,              # PCM
-            1,              # channels
+            1,           # PCM format
+            1,           # channels
             PCM_RATE,
             PCM_RATE * SAMPLE_WIDTH,
             SAMPLE_WIDTH,
@@ -72,12 +69,11 @@ class TranscriptionRepository:
             b"data",
             len(pcm),
         ) + pcm
-    
+
     @staticmethod
-    def _save_wav(wav: bytes):
-        """Save wav to tmp/current_audio.wav"""
+    def _save_wav(wav: bytes, filename: str = "current_audio.wav") -> None:
+        """Write the WAV to tmp/current_audio.wav (creates tmp/ if needed)."""
         tmp_dir = os.path.join(os.getcwd(), "tmp")
         os.makedirs(tmp_dir, exist_ok=True)
-        file_path = os.path.join(tmp_dir, "current_audio.wav")
-        with open(file_path, "wb") as f:
+        with open(os.path.join(tmp_dir, filename), "wb") as f:
             f.write(wav)

@@ -26,13 +26,17 @@ import React, {
     isMicrophoneGranted: boolean;
     muted: boolean;
     toggleMute: () => void;
+    systemState: SystemState | undefined;
   }
+
+  export type SystemState = "transcription_start" | "get_agent_response_start" | "tts_start" | "idle";
 
   const ChatContext = createContext<ChatContextType | undefined>(undefined);
   
   export function ChatProvider({ children }: { children: ReactNode }) {
     const [messages, setMessages] = useState<Message[]>([]);
-    const { sendData, playbackStream, isConnected, isConnecting, error, isLoading } = useChatWebsocket({setMessages});
+    const [systemState, setSystemState] = useState<SystemState>();
+    const { sendData, playbackStream, isConnected, isConnecting, error, isLoading } = useChatWebsocket({setMessages, setSystemState});
     
     const { micStream, isMicrophoneGranted, muted, toggleMute } = useChatMicrophone({send: sendData});
     
@@ -47,7 +51,8 @@ import React, {
       micStream,
       isMicrophoneGranted,
       muted,
-      toggleMute
+      toggleMute,
+      systemState
     }}>{children}</ChatContext.Provider>;
   }
   

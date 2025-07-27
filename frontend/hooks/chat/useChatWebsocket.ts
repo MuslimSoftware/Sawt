@@ -7,16 +7,14 @@ import { Message } from "@/contexts/ChatContext";
 
 const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS || "wss://sawt-api.younesbenketira.com/ws/chat";
 
-export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<React.SetStateAction<Message[]>>}) => {
+export const useChatWebsocket = ({setMessages, setSystemState}: {setMessages: React.Dispatch<React.SetStateAction<Message[]>>, setSystemState: React.Dispatch<React.SetStateAction<string>>}) => {
   const { play, stopAll, playbackStream } = useAudioPlayback();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
-      // console.log("Received message:", event.data);
-      setIsLoading(false);
-      // Play incoming audio stream
       if (event.data instanceof ArrayBuffer) {
+        setIsLoading(false);
         play(event.data);
         return;
       }
@@ -32,6 +30,10 @@ export const useChatWebsocket = ({setMessages}: {setMessages: React.Dispatch<Rea
           break;
         case "text":
           setMessages((prev) => [...prev, { role: message.role, content: message.text }]);
+          setSystemState(undefined);
+          break;
+        case "event":
+          setSystemState(message.event);
           break;
       }
     },

@@ -9,7 +9,6 @@ interface LatestMessageProps {
 export const LatestMessage = ({ role }: LatestMessageProps) => {
     const { messages, isLoading } = useChat();
     const [faded, setFaded] = useState(false);
-    const [prevMessage, setPrevMessage] = useState<string | undefined>(undefined);
 
     const latestMessage = useMemo(() => 
         messages.findLast(message => message.role === role)?.content, 
@@ -18,14 +17,8 @@ export const LatestMessage = ({ role }: LatestMessageProps) => {
 
     useEffect(() => {
         if (isLoading) setFaded(true);
+        else setFaded(false);
     }, [isLoading]);
-
-    useEffect(() => {
-        if (latestMessage !== prevMessage) {
-            setFaded(false);
-            setPrevMessage(latestMessage);
-        }
-    }, [latestMessage, prevMessage]);
 
     const containerClassName = `${styles.container} ${styles[role]} ${faded ? styles.faded : ''}`;
 

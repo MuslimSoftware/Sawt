@@ -39,9 +39,11 @@ This document provides a map of the frontend directory to help you understand th
 ### `header/`
 
 - `BadgeHeader.module.css`: CSS module for the badge header component.
-- `BadgeHeader.tsx`: A header component with badges.
+- `BadgeHeader.tsx`: A header component with badges, now with a two-row layout.
 - `MicStatusBadge.module.css`: CSS module for the mic status badge component.
 - `MicStatusBadge.tsx`: A badge that displays the microphone status.
+- `SystemStatePill.module.css`: CSS module for the system state pill component.
+- `SystemStatePill.tsx`: A pill that displays the current state of the backend.
 - `WebsocketStatusPill.module.css`: CSS module for the websocket status pill component.
 - `WebsocketStatusPill.tsx`: A pill that displays the websocket status.
 

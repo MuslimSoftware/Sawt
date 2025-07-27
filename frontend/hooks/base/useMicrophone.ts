@@ -5,7 +5,7 @@ const WORKLET_PATH = '/audio-worklet/down-sampler.js';
 
 const AUDIO_CONFIGS = {
   voiceThreshold : 0.06,
-  silenceTimeoutMs : 3000,
+  silenceTimeoutMs : 1000,
   preBufferMs    : 500,
   speakingGraceMs: 250,
 }

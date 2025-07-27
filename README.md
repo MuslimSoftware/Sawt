@@ -1,10 +1,15 @@
 # Sawt (صوت)
-
 “Sawt” means “voice” in Arabic.
 
-A quick demo for a DIY voice agent (not real-time).
+A DIY voice agent:
+- streams voice to server
+- Transcribes speech ([whisper](https://huggingface.co/openai/whisper-large-v3))
+- Prompts LLM ([DSPy](https://dspy.ai/))
+- TTS ([edge-tts](https://github.com/rany2/edge-tts))
 
-Live demo: https://sawt.younesbenketira.com
+Try it out: https://sawt.younesbenketira.com
+
+<video src="https://github.com/user-attachments/assets/7237e5c2-5333-467c-b669-e9b4280a5193" controls="controls" style="max-width: 100%;"></video>
 
 ## Features
 
