@@ -1,0 +1,28 @@
+# Production environment for Sawt
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        NEXT_PUBLIC_BACKEND_WS: ${NEXT_PUBLIC_BACKEND_WS}
+        NEXT_PUBLIC_NODE_ENV: ${NEXT_PUBLIC_NODE_ENV}
+    environment:
+      - NEXT_PUBLIC_BACKEND_WS=${NEXT_PUBLIC_BACKEND_WS}
+      - NEXT_PUBLIC_NODE_ENV=${NEXT_PUBLIC_NODE_ENV}
+    networks:
+      - app-net
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge

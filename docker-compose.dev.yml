@@ -1,0 +1,34 @@
+# Dev environment for Sawt
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env.dev
+    ports:
+      - "3000:3000"
+    networks:
+      - app-net
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env.dev
+    ports:
+      - "8000:8000"
+    networks:
+      - app-net
+    volumes:
+      - ./backend:/app
+
+networks:
+  app-net:
+    driver: bridge
