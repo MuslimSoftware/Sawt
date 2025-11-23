@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+aiohttp
+python-dotenv
+huggingface-hub>=0.20.0
+transformers>=4.35.0
+tokenizers>=0.15.0
+torch
+dspy
+google-cloud-texttospeech==2.14.1

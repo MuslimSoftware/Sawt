@@ -1,0 +1,93 @@
+# macOS
+.DS_Store
+.env
+
+# Google Cloud credentials
+backend/gen-lang-client-*.json
+**/google-credentials*.json
+
+# Next.js
+.next/
+node_modules/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.prod
+.env.dev
+
+# TMP
+tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dylib
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env/
+pip-wheel-metadata/
+
+# Python virtual environments (specific names)
+llama_env/
+**/llama_env/
+
+# Rust
+/target/
+**/target/
+**/*.rs.bk
+
+# C/C++ build artifacts
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+
+# Whisper & other model artifacts
+*.ggml
+*.gguf
+*.bin
+*.pt
+*.safetensors
+
+# Agent-S2 knowledge base (can be large)
+kb_s2/
+
+# Build and cache directories
+.cache/
+.cargo/
+node_modules/
+.npm/
+
+# IDE & Editor folders
+.idea/
+.vscode/
+*.code-workspace
+
+# OS generated files
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Debug and profiling
+*.dSYM/
+*.prof
+*.trace
+/app/target/debug/automation
